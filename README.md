@@ -1,7 +1,4 @@
-# ObsidianFlow
-
 ![ObsidianFlow Logo](./logo.png)
-
 > **Production-grade Next.js 14 boilerplate** with authentication, role-based access, admin panel, and a self-hosted setup wizard.
 
 ---
