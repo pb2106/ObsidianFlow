@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { AuthProvider } from '@/lib/auth/context';
+import { ThemeProvider } from '@/components/ui/ThemeProvider';
 import { projectConfig } from '@/config/project.config';
 import './globals.css';
 import './auth.css';
@@ -14,7 +15,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" suppressHydrationWarning>
       <body style={{ fontFamily: `${projectConfig.theme.font}, system-ui, sans-serif` }}>
         <AuthProvider>
-          {children}
+          <ThemeProvider>
+            {children}
+          </ThemeProvider>
         </AuthProvider>
       </body>
     </html>

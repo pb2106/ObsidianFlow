@@ -1,101 +1,168 @@
-import Image from "next/image";
+'use client';
+/**
+ * app/page.tsx
+ * Root home page — the post-login landing.
+ * Redirects unauthenticated users to /login via the AuthContext.
+ */
 
-export default function Home() {
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/auth/context';
+import { AppNavbar } from '@/components/ui/AppNavbar';
+import { projectConfig } from '@/config/project.config';
+
+export default function HomePage() {
+  const { isAuthenticated, isLoading, user } = useAuth();
+  const router = useRouter();
+  const theme = projectConfig.theme;
+  const meta = projectConfig.meta;
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) router.replace('/login');
+  }, [isAuthenticated, isLoading, router]);
+
+  if (isLoading) {
+    return (
+      <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)' }}>
+        <div className="auth-spinner" style={{ width: 36, height: 36, borderColor: 'var(--border)', borderTopColor: 'var(--primary)' }} />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) return null;
+
+  const initials = [(user?.firstName ?? '').charAt(0), (user?.lastName ?? '').charAt(0)]
+    .filter(Boolean).join('').toUpperCase() || user?.email?.charAt(0).toUpperCase() || '?';
+
+  const quickLinks = [
+    { href: '/profile', label: 'My Profile', desc: 'View and edit your account', icon: '👤', always: true },
+    { href: '/admin/dashboard', label: 'Admin Panel', desc: 'Manage users, roles & settings', icon: '⚙️', always: false, adminOnly: true },
+  ].filter(l => l.always || (l.adminOnly && user?.role === 'admin'));
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+    <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', background: 'var(--bg)' }}>
+      <AppNavbar />
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+      <main style={{ flex: 1, maxWidth: 1100, margin: '0 auto', width: '100%', padding: '3rem 1.5rem' }}>
+
+        {/* Hero greeting */}
+        <div style={{
+          background: `linear-gradient(135deg, ${theme.primaryColor}14, ${theme.accentColor}0a)`,
+          border: `1px solid ${theme.primaryColor}24`,
+          borderRadius: 24,
+          padding: '2.5rem',
+          marginBottom: '2rem',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '1.5rem',
+          position: 'relative',
+          overflow: 'hidden',
+        }}>
+          {/* Background decoration */}
+          <div aria-hidden style={{
+            position: 'absolute', top: -60, right: -60,
+            width: 220, height: 220, borderRadius: '50%',
+            background: `radial-gradient(circle, ${theme.primaryColor}18, transparent 70%)`,
+            pointerEvents: 'none',
+          }} />
+
+          {/* Avatar */}
+          <div style={{
+            width: 80, height: 80, borderRadius: '50%', flexShrink: 0,
+            background: `linear-gradient(135deg, ${theme.primaryColor}, ${theme.accentColor})`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontWeight: 800, fontSize: '1.9rem', color: '#fff',
+            boxShadow: `0 8px 28px ${theme.primaryColor}50`,
+          }}>
+            {initials}
+          </div>
+
+          {/* Text */}
+          <div>
+            <div style={{ fontSize: '.82rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--text-muted)', marginBottom: '.25rem' }}>
+              Welcome back
+            </div>
+            <h1 style={{ fontWeight: 800, fontSize: '2rem', letterSpacing: '-.03em', marginBottom: '.3rem' }}>
+              {user?.firstName ? `${user.firstName}${user.lastName ? ' ' + user.lastName : ''}` : user?.email}
+            </h1>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '.6rem', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '.82rem', color: 'var(--text-muted)' }}>{user?.email}</span>
+              <span style={{
+                background: `${theme.primaryColor}22`, color: theme.primaryColor,
+                padding: '.15rem .6rem', borderRadius: 99,
+                fontSize: '.73rem', fontWeight: 700, textTransform: 'capitalize',
+              }}>
+                {user?.role}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Quick links */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+          {quickLinks.map(link => (
+            <a key={link.href} href={link.href} style={{ textDecoration: 'none' }}>
+              <div style={{
+                background: 'var(--surface)',
+                border: '1px solid var(--border)',
+                borderRadius: 16,
+                padding: '1.25rem 1.5rem',
+                cursor: 'pointer',
+                transition: 'box-shadow .18s, border-color .18s, transform .12s',
+                display: 'flex', gap: '1rem', alignItems: 'center',
+              }}
+                onMouseEnter={e => { const el = e.currentTarget; el.style.boxShadow = 'var(--shadow-md)'; el.style.borderColor = `${theme.primaryColor}55`; el.style.transform = 'translateY(-2px)'; }}
+                onMouseLeave={e => { const el = e.currentTarget; el.style.boxShadow = ''; el.style.borderColor = 'var(--border)'; el.style.transform = ''; }}
+              >
+                <div style={{
+                  width: 48, height: 48, borderRadius: 12,
+                  background: `linear-gradient(135deg, ${theme.primaryColor}1a, ${theme.accentColor}14)`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '1.4rem', flexShrink: 0,
+                }}>
+                  {link.icon}
+                </div>
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: '.95rem', marginBottom: '.15rem' }}>{link.label}</div>
+                  <div style={{ color: 'var(--text-muted)', fontSize: '.8rem' }}>{link.desc}</div>
+                </div>
+              </div>
+            </a>
+          ))}
+        </div>
+
+        {/* Platform info */}
+        <div style={{
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
+          borderRadius: 16,
+          padding: '1.5rem',
+        }}>
+          <h2 style={{ fontWeight: 600, margin: 0, marginBottom: '1rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '.06em', fontSize: '.78rem' }}>
+            About this platform
+          </h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1.5rem' }}>
+            <Stat label="Platform" value={meta.name} />
+            <Stat label="Your Role" value={user?.role ?? '—'} capitalize />
+            <Stat label="Support" value={meta.supportEmail || '—'} />
+            <Stat label="Timezone" value={meta.timezone} />
+          </div>
         </div>
       </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
+
+      {/* Footer */}
+      <footer style={{ borderTop: '1px solid var(--border)', padding: '1rem 1.5rem', textAlign: 'center', fontSize: '.78rem', color: 'var(--text-muted)' }}>
+        © {new Date().getFullYear()} {meta.name}. Built with ObsidianFlow.
       </footer>
+    </div>
+  );
+}
+
+function Stat({ label, value, capitalize }: { label: string; value: string; capitalize?: boolean }) {
+  return (
+    <div>
+      <div style={{ fontSize: '.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.07em', color: 'var(--text-muted)', marginBottom: '.3rem' }}>{label}</div>
+      <div style={{ fontWeight: 500, fontSize: '.9rem', textTransform: capitalize ? 'capitalize' : undefined }}>{value}</div>
     </div>
   );
 }

@@ -6,8 +6,10 @@
 
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth/context';
+import { useTheme } from '@/components/ui/ThemeProvider';
 import { useRouter } from 'next/navigation';
 import { projectConfig } from '@/config/project.config';
+
 
 interface AppNavbarProps {
     isAdmin?: boolean;
