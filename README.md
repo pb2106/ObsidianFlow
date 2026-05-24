@@ -2,7 +2,7 @@
 
 <br />
 <div align="center">
-  <img src="./logo.png" alt="ObsidianFlow Logo" width="250" />
+  <img src="./logo.png" alt="ObsidianFlow Logo" width="500" />
 </div>
 <br />
 
