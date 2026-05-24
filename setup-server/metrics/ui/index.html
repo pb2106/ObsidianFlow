@@ -665,6 +665,21 @@
                 <!-- API Explorer -->
                 <div class="pg" id="pg-apidocs">
                     <h2>Live API Explorer</h2>
+
+                    <div class="card"
+                        style="margin-bottom:1rem;background:#0a0a0a;border:1px solid #333;border-left:3px solid #f59e0b">
+                        <h3 style="color:#f59e0b;font-size:0.9rem;margin-bottom:0.5rem">🔐 Cryptographic Session Forger
+                        </h3>
+                        <span style="color:#a3a3a3;font-size:0.75rem;display:block;margin-bottom:0.7rem">Bypasses
+                            Next.js to mint and violently inject a signed HttpOnly JWT cookie into your local browser
+                            state.</span>
+                        <div style="display:flex;gap:0.5rem">
+                            <input class="fi" id="forge-email" placeholder="Force identity as admin@example.com..."
+                                style="margin:0;background:#111">
+                            <button class="sb am" onclick="forgeSession()">Spoof Identity</button>
+                        </div>
+                    </div>
+
                     <div class="card" style="margin-bottom:1rem;background:#0a0a0a;border:1px solid #333">
                         <button class="sb bl" onclick="loadApiDocs()" style="margin-bottom:1rem">↻ Scan NextJS API
                             Directory</button>
@@ -896,6 +911,18 @@
                 const r = await api('/api/perf/file', { method: 'POST', body: JSON.stringify({ p: 'config/project.config.ts', c: $('cfg-disk').value }) });
                 if (r.ok) alert('Source written. NextJS should perform an HMR hot-reload immediately.');
                 else alert(r.e);
+            }
+
+            // Cryptographic Injector
+            async function forgeSession() {
+                const email = $('forge-email').value.trim();
+                if (!email) return alert('Enter target email to spoof');
+                const r = await api('/api/perf/forge', { method: 'POST', body: JSON.stringify({ email }) });
+                if (r.ok) {
+                    alert(`Identity Spoofed!\nThe Node sidecar extracted your RSA key from disk and forced a cryptographically-valid HttpOnly JWT into your browser representing ${email}. Live API requests will now succeed.`);
+                } else {
+                    alert('Spoof failed: ' + r.e);
+                }
             }
 
             // API Explorer
