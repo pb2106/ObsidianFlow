@@ -10,9 +10,13 @@
   },
   "dependencies": {
     "@types/bcryptjs": "^3.0.0",
+    "@types/jsonwebtoken": "^9.0.10",
     "bcryptjs": "^3.0.3",
+    "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.6.2",
-    "next": "14.2.35"
+    "next": "14.2.35",
+    "otplib": "^13.4.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/node": "^20",
