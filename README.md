@@ -13,6 +13,7 @@
 | **Admin Panel** | Standalone local UI (port 3002) for User management, role CRUD, system config |
 | **Setup Wizard** | 7-step React wizard at `localhost:3001` — generates `project.config.ts` from your choices |
 | **Security** | Rate limiting, endpoint guard (disable any route at runtime), CSP headers, no source maps in prod |
+| **Architecture** | Decoupled Zero-Trust Backend — local admin GUI holds no secrets; API verifies all JWTs & Permissions natively |
 | **Anti-Debug** | Optional — DevTools detection, console poisoning, React DevTools hook poisoning |
 | **Design System** | CSS variables (primary/accent/dark mode), theme injected at runtime from config |
 
@@ -309,7 +310,29 @@ export default async function DashboardPage() {
 
 ---
 
-## 🔧 Troubleshooting & Known Issues
+## � Production Deployment
+
+Deploying ObsidianFlow requires splitting the architecture: **The Web App goes live to the internet, but the Admin Panel strictly stays on your local machine.**
+
+### 1. Deploying the Main Web App (Vercel / VPS)
+1. Commit your project and push it to GitHub.
+2. In your Vercel Dashboard (or VPS server), set the build directory to `main-app`.
+3. The build command should automatically trigger `next build`.
+4. **CRITICAL:** Copy the production `MONGODB_URI`, `JWT_SECRET`, and `AES_ENCRYPTION_KEY` variables from your local `.env.local` into your Vercel/VPS Environment Variables settings!
+
+*(Note: Never deploy the root `/start.js` or the `/setup-server` folder to the internet. They are intended exclusively for local initialization.)*
+
+### 2. Managing the Live Database via Local Admin Panel
+When your application is live on the internet, you do **not** upload the admin panel. 
+To manage your live users, run the admin panel locally on your own computer:
+1. Open a terminal and run `node admin-app/server.js` on your computer.
+2. Open `http://localhost:3002`.
+3. On the login screen, change the **Main App URL** from `http://localhost:3000` to your live Vercel domain (e.g., `https://my-app.vercel.app`).
+4. Log in using your admin credentials. The local UI will seamlessly route all commands (User Creation, CSV Data Imports, etc.) directly to your production NextJS backend over HTTPS!
+
+---
+
+## �🔧 Troubleshooting & Known Issues
 
 ### 1. `ERESOLVE` Peer Dependency Error on Install
 If you encounter this error when running `npm install`:
