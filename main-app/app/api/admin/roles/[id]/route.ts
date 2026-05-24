@@ -7,14 +7,14 @@
 import { z } from 'zod';
 import { connectDB } from '@/lib/db/connect';
 import RoleModel from '@/models/role.model';
-import { withAdmin } from '@/lib/middleware/withRole';
+import { withPermission } from '@/lib/middleware/withRole';
 import { AuthedRequest } from '@/lib/middleware/withAuth';
 import { ok, fail, validationError, secureHeaders } from '@/lib/api/response';
 
 const patchSchema = z.object({
     color: z.string().regex(/^#[0-9a-f]{6}$/i).optional(),
     isDefault: z.boolean().optional(),
-    permissions: z.record(z.boolean()).optional(),
+    permissions: z.record(z.string(), z.boolean()).optional(),
 });
 
 async function patchHandler(req: AuthedRequest, ctx: { params: Record<string, string> }) {
@@ -42,9 +42,9 @@ async function deleteHandler(_req: AuthedRequest, ctx: { params: Record<string, 
     if (!role || role.isDeleted) return fail('Role not found', 'NOT_FOUND', 404);
     if (role.isDefault) return fail('Cannot delete the default role. Set another role as default first.', 'DEFAULT_ROLE', 409);
 
-    await role.softDelete();
+    await (role as any).softDelete();
     return secureHeaders(ok(null, 'Role deleted'));
 }
 
-export const PATCH = withAdmin(patchHandler as Parameters<typeof withAdmin>[0]);
-export const DELETE = withAdmin(deleteHandler as Parameters<typeof withAdmin>[0]);
+export const PATCH = withPermission('edit_roles', patchHandler as Parameters<typeof withPermission>[1]);
+export const DELETE = withPermission('edit_roles', deleteHandler as Parameters<typeof withPermission>[1]);

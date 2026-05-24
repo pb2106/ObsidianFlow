@@ -29,7 +29,7 @@ export interface TokenPayload {
     email: string;
     role: string;
     sessionId: string;
-    type: 'access' | 'refresh';
+    type: 'access' | 'refresh' | 'temp';
 }
 
 // ─── Sign access token ────────────────────────────────────────────────────────
@@ -44,6 +44,12 @@ export function signRefreshToken(payload: Omit<TokenPayload, 'type'>): string {
     const expiry = projectConfig.auth.jwt.refreshExpiry || '30d';
     const opts: SignOptions = { algorithm: 'RS256', expiresIn: expiry as SignOptions['expiresIn'] };
     return jwt.sign({ ...payload, type: 'refresh' }, getPrivateKey(), opts);
+}
+
+// ─── Sign temp token (for 2FA) ────────────────────────────────────────────────
+export function signTempToken(sub: string): string {
+    const opts: SignOptions = { algorithm: 'RS256', expiresIn: '5m' };
+    return jwt.sign({ sub, type: 'temp' }, getPrivateKey(), opts);
 }
 
 // ─── Verify token ─────────────────────────────────────────────────────────────

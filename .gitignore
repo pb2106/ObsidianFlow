@@ -33,3 +33,10 @@ Thumbs.db
 
 # ─── TypeScript cache ────────────────────────────────────────────────────────
 *.tsbuildinfo
+
+# ─── PEM keys (NEVER commit) ─────────────────────────────────────────────────
+*.pem
+private.pem
+public.pem
+
+

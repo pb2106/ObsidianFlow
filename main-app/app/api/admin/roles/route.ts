@@ -7,7 +7,7 @@
 import { z } from 'zod';
 import { connectDB } from '@/lib/db/connect';
 import RoleModel from '@/models/role.model';
-import { withAdmin } from '@/lib/middleware/withRole';
+import { withPermission } from '@/lib/middleware/withRole';
 import { AuthedRequest } from '@/lib/middleware/withAuth';
 import { ok, fail, validationError, secureHeaders } from '@/lib/api/response';
 
@@ -15,7 +15,7 @@ const createSchema = z.object({
     name: z.string().min(1).max(32).regex(/^[a-z0-9_]+$/, 'Lowercase alphanumeric and underscores only'),
     color: z.string().regex(/^#[0-9a-f]{6}$/i, 'Must be a hex color').optional(),
     isDefault: z.boolean().optional(),
-    permissions: z.record(z.boolean()).optional(),
+    permissions: z.record(z.string(), z.boolean()).optional(),
 });
 
 async function getHandler(_req: AuthedRequest) {
@@ -39,9 +39,10 @@ async function postHandler(req: AuthedRequest) {
         await RoleModel.updateMany({ isDefault: true }, { isDefault: false });
     }
 
+    // @ts-ignore
     const role = await RoleModel.create(parsed.data);
     return secureHeaders(ok(role, 'Role created', 201));
 }
 
-export const GET = withAdmin(getHandler as Parameters<typeof withAdmin>[0]);
-export const POST = withAdmin(postHandler as Parameters<typeof withAdmin>[0]);
+export const GET = withPermission('view_roles', getHandler as Parameters<typeof withPermission>[1]);
+export const POST = withPermission('edit_roles', postHandler as Parameters<typeof withPermission>[1]);

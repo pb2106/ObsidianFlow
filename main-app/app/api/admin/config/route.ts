@@ -7,7 +7,7 @@
 import { z } from 'zod';
 import { connectDB } from '@/lib/db/connect';
 import SystemConfigModel from '@/models/system_config.model';
-import { withAdmin } from '@/lib/middleware/withRole';
+import { withPermission } from '@/lib/middleware/withRole';
 import { AuthedRequest } from '@/lib/middleware/withAuth';
 import { ok, validationError, secureHeaders } from '@/lib/api/response';
 
@@ -16,7 +16,7 @@ const patchSchema = z.object({
     maintenance_mode: z.boolean().optional(),
     maintenance_message: z.string().max(500).optional(),
     maintenance_back_at: z.string().datetime().optional(),
-    runtime_config: z.record(z.unknown()).optional(),
+    runtime_config: z.record(z.string(), z.unknown()).optional(),
 });
 
 async function getHandler(_req: AuthedRequest) {
@@ -41,5 +41,5 @@ async function patchHandler(req: AuthedRequest) {
     return secureHeaders(ok(cfg, 'Config updated'));
 }
 
-export const GET = withAdmin(getHandler as Parameters<typeof withAdmin>[0]);
-export const PATCH = withAdmin(patchHandler as Parameters<typeof withAdmin>[0]);
+export const GET = withPermission('view_config', getHandler as Parameters<typeof withPermission>[1]);
+export const PATCH = withPermission('edit_config', patchHandler as Parameters<typeof withPermission>[1]);

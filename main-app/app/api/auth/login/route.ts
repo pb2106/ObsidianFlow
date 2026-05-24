@@ -34,6 +34,14 @@ async function handler(req: NextRequest) {
     try {
         const result = await loginWithEmail({ identifier, password, ip, userAgent });
 
+        if (result.requires2FA) {
+            return ok({
+                requires2FA: true,
+                tempToken: result.tempToken,
+                user: result.user
+            }, '2FA Required');
+        }
+
         const maxAge = projectConfig.auth.rememberMe.enabled
             ? projectConfig.auth.rememberMe.days * 24 * 60 * 60
             : 24 * 60 * 60;
@@ -43,13 +51,15 @@ async function handler(req: NextRequest) {
             user: result.user,
         }, 'Login successful');
 
-        res.cookies.set('__refresh', result.refreshToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
-            path: '/',
-            maxAge,
-        });
+        if (result.refreshToken) {
+            res.cookies.set('__refresh', result.refreshToken, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax',
+                path: '/',
+                maxAge,
+            });
+        }
 
         return secureHeaders(res);
     } catch (err) {
@@ -60,4 +70,4 @@ async function handler(req: NextRequest) {
     }
 }
 
-export const POST = endpointGuard(endpointMeta.id, authRateLimit()(handler));
+export const POST = endpointGuard(endpointMeta.id, authRateLimit(handler as any));

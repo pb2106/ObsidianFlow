@@ -16,6 +16,7 @@ export interface IRole extends Document {
     updatedAt: Date;
     isDeleted: boolean;
     isActive: boolean;
+    softDelete: () => Promise<this>;
 }
 
 const RoleSchema = new Schema<IRole>(

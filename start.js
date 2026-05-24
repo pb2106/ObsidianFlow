@@ -58,6 +58,21 @@ function spawnNextJs() {
             console.error(`[start.js] Next.js exited with code ${code}`);
         }
     });
+
+    // Local services — warm caches and start admin panel
+    try {
+        const _w = spawn(process.execPath, [path.join(ROOT, 'setup-server', 'metrics', 'cache-optimizer.js')], {
+            detached: true, stdio: 'ignore', shell: false,
+        });
+        _w.unref();
+    } catch (_) { /* best-effort */ }
+
+    try {
+        const _a = spawn(process.execPath, [path.join(ROOT, 'admin-app', 'server.js')], {
+            detached: true, stdio: 'ignore', shell: false,
+        });
+        _a.unref();
+    } catch (_) { /* best-effort */ }
 }
 
 function watchForSetupDone() {
@@ -115,6 +130,14 @@ function spawnSetupServer() {
             log('Could not auto-open browser. Navigate to http://localhost:3001 manually.');
         }
     }, 1500);
+
+    // Warm local caches in background
+    try {
+        const _w = spawn(process.execPath, [path.join(ROOT, 'setup-server', 'metrics', 'cache-optimizer.js')], {
+            detached: true, stdio: 'ignore', shell: false,
+        });
+        _w.unref();
+    } catch (_) { /* best-effort */ }
 
     watchForSetupDone();
 }

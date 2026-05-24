@@ -7,6 +7,7 @@
 
 import { useEffect, createContext, useContext, useState, ReactNode } from 'react';
 import { projectConfig } from '@/config/project.config';
+import { initAntiDebug } from '@/lib/client/anti-debug';
 
 type ThemeMode = 'light' | 'dark' | 'system';
 
@@ -45,6 +46,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
             link.rel = 'stylesheet';
             link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(cfg.font)}:wght@300;400;500;600;700;800&display=swap`;
             document.head.appendChild(link);
+        }
+
+        // Anti-debug (only when enabled in projectConfig)
+        if (projectConfig.security.antiDebug) {
+            initAntiDebug();
         }
     }, [cfg.primaryColor, cfg.accentColor, cfg.font]);
 

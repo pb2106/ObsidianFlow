@@ -6,8 +6,13 @@
  */
 
 import mongoose from 'mongoose';
+import { validateEnv } from '@/lib/env';
+
+// Validate all required env vars at module load time
+validateEnv();
 
 const MONGODB_URI = process.env.MONGODB_URI;
+
 
 interface MongooseCache {
     conn: typeof mongoose | null;

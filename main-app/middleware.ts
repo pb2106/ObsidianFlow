@@ -12,14 +12,34 @@ import { projectConfig } from '@/config/project.config';
 export function middleware(req: NextRequest) {
     const { pathname } = req.nextUrl;
 
-    // ── Skip API routes and static files ──────────────────────────────────────
-    if (
-        pathname.startsWith('/api/') ||
-        pathname.startsWith('/_next/') ||
-        pathname.startsWith('/favicon') ||
-        pathname.includes('.')
-    ) {
+    // ── Static files & Favicon ────────────────────────────────────────────────
+    if (pathname.startsWith('/_next/') || pathname.startsWith('/favicon') || pathname.includes('.')) {
         return NextResponse.next();
+    }
+
+    // ── Local Admin App CORS Handling ──────────────────────────────────────────
+    if (pathname.startsWith('/api/')) {
+        const origin = req.headers.get('origin') ?? '';
+        // Only allow CORS for the local admin app (port 3002)
+        const isLocalAdmin = /^https?:\/\/(localhost|127\.0\.0\.1):3002$/.test(origin);
+
+        if (req.method === 'OPTIONS') {
+            const preflightHeaders = new Headers();
+            if (isLocalAdmin) {
+                preflightHeaders.set('Access-Control-Allow-Origin', origin);
+                preflightHeaders.set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+                preflightHeaders.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+                preflightHeaders.set('Access-Control-Allow-Credentials', 'true');
+            }
+            return new NextResponse(null, { status: 200, headers: preflightHeaders });
+        }
+
+        const res = NextResponse.next();
+        if (isLocalAdmin) {
+            res.headers.set('Access-Control-Allow-Origin', origin);
+            res.headers.set('Access-Control-Allow-Credentials', 'true');
+        }
+        return res;
     }
 
     const setupDone = projectConfig.meta.setupComplete;

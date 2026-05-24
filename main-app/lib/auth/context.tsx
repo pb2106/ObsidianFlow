@@ -28,7 +28,7 @@ interface AuthState {
 }
 
 interface AuthContextValue extends AuthState {
-    login: (identifier: string, password: string) => Promise<void>;
+    login: (identifier: string, password: string) => Promise<any>;
     logout: () => Promise<void>;
     refreshSession: () => Promise<string | null>;
     setSession: (user: AuthUser, token: string) => void;
@@ -102,6 +102,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
         const json = await res.json();
         if (!json.success) throw new Error(json.message || 'Login failed');
+        if (json.data?.requires2FA) {
+            return json.data; // Return { requires2FA, tempToken, user } to the UI
+        }
         setSession(json.data.user, json.data.accessToken);
     }
 

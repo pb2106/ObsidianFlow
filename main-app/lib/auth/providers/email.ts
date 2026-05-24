@@ -8,7 +8,7 @@ import { connectDB } from '@/lib/db/connect';
 import UserModel from '@/models/user.model';
 import SessionModel from '@/models/session.model';
 import { verifyPassword } from '@/lib/auth/password';
-import { signAccessToken, signRefreshToken, generateRefreshToken } from '@/lib/auth/jwt';
+import { signAccessToken, signRefreshToken, generateRefreshToken, signTempToken } from '@/lib/auth/jwt';
 import { projectConfig } from '@/config/project.config';
 
 // ─── Typed errors ─────────────────────────────────────────────────────────────
@@ -24,9 +24,11 @@ export class AuthError extends Error {
 }
 
 export interface LoginResult {
-    accessToken: string;
-    refreshToken: string;
-    sessionId: string;
+    requires2FA?: boolean;
+    tempToken?: string;
+    accessToken?: string;
+    refreshToken?: string;
+    sessionId?: string;
     user: {
         id: string;
         email: string;
@@ -34,6 +36,7 @@ export interface LoginResult {
         firstName?: string;
         lastName?: string;
         username?: string;
+        totpEnabled?: boolean;
     };
 }
 
@@ -100,6 +103,25 @@ export async function loginWithEmail(params: {
 
         await user.save();
         throw new AuthError('Invalid credentials', 'INVALID_CREDENTIALS');
+    }
+
+    // ── 2FA / TOTP Intercept ──
+    // If user is admin (or totpEnabled is true), stop here and issue a temp token.
+    if (user.role === 'admin' || user.totpEnabled) {
+        await user.save();
+        return {
+            requires2FA: true,
+            tempToken: signTempToken(String(user._id)),
+            user: {
+                id: String(user._id),
+                email: user.email,
+                role: user.role,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                username: user.username,
+                totpEnabled: user.totpEnabled,
+            },
+        };
     }
 
     // ── Enforce max concurrent sessions ──

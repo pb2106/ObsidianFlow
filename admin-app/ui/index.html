@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Admin Panel</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0
+        }
+
+        :root {
+            --bg: #0c0e14;
+            --s1: #141720;
+            --s2: #1c1f2e;
+            --bd: rgba(255, 255, 255, .08);
+            --tx: #edf0f9;
+            --mu: #8892a4;
+            --pr: #6366f1;
+            --ac: #10b981;
+            --er: #ef4444;
+            --am: #f59e0b
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--tx);
+            font: 13px/1.5 'Inter', system-ui, sans-serif;
+            min-height: 100dvh
+        }
+
+        #gate {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100dvh
+        }
+
+        .gc {
+            background: var(--s1);
+            border: 1px solid var(--bd);
+            border-radius: 14px;
+            padding: 2rem;
+            width: 340px
+        }
+
+        .gc h1 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: .25rem
+        }
+
+        .gc p {
+            font-size: .78rem;
+            color: var(--mu);
+            margin-bottom: 1.25rem
+        }
+
+        label {
+            display: block;
+            font-size: .75rem;
+            color: var(--mu);
+            margin-bottom: .3rem
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: .55rem .8rem;
+            background: var(--s2);
+            border: 1px solid var(--bd);
+            border-radius: 7px;
+            color: var(--tx);
+            font-size: .85rem;
+            margin-bottom: .8rem;
+            outline: none
+        }
+
+        input:focus,
+        select:focus {
+            border-color: var(--pr);
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, .15)
+        }
+
+        .btn {
+            width: 100%;
+            padding: .6rem;
+            background: var(--pr);
+            border: none;
+            border-radius: 7px;
+            color: #fff;
+            font-size: .85rem;
+            font-weight: 600;
+            cursor: pointer
+        }
+
+        .btn:hover {
+            opacity: .88
+        }
+
+        .btn.sm {
+            width: auto;
+            padding: .4rem .85rem;
+            font-size: .78rem
+        }
+
+        .btn.er {
+            background: var(--er)
+        }
+
+        .btn.ac {
+            background: var(--ac)
+        }
+
+        #err {
+            color: var(--er);
+            font-size: .75rem;
+            margin-top: .5rem
+        }
+
+        #app {
+            display: none
+        }
+
+        .layout {
+            display: grid;
+            grid-template-columns: 210px 1fr;
+            min-height: 100dvh
+        }
+
+        aside {
+            background: var(--s1);
+            border-right: 1px solid var(--bd);
+            display: flex;
+            flex-direction: column
+        }
+
+        .sidebar-top {
+            padding: 1.25rem 1rem 1rem;
+            border-bottom: 1px solid var(--bd)
+        }
+
+        .sidebar-top h2 {
+            font-size: .9rem;
+            font-weight: 700
+        }
+
+        .sidebar-top span {
+            font-size: .7rem;
+            color: var(--mu)
+        }
+
+        nav {
+            padding: .5rem 0;
+            flex: 1
+        }
+
+        .ni {
+            display: flex;
+            align-items: center;
+            gap: .6rem;
+            padding: .55rem 1rem;
+            font-size: .82rem;
+            color: var(--mu);
+            cursor: pointer;
+            border-left: 3px solid transparent;
+            transition: all .12s;
+            user-select: none
+        }
+
+        .ni:hover,
+        .ni.on {
+            color: var(--tx);
+            background: var(--s2);
+            border-left-color: var(--pr)
+        }
+
+        .ni .ic {
+            width: 16px;
+            text-align: center
+        }
+
+        main {
+            padding: 1.75rem;
+            overflow: auto
+        }
+
+        .pg {
+            display: none
+        }
+
+        .pg.on {
+            display: block
+        }
+
+        .pg-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.25rem
+        }
+
+        .pg-header h2 {
+            font-size: 1.05rem;
+            font-weight: 700
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: .75rem;
+            margin-bottom: 1.5rem
+        }
+
+        .stat {
+            background: var(--s1);
+            border: 1px solid var(--bd);
+            border-radius: 12px;
+            padding: 1rem 1.1rem
+        }
+
+        .stat .v {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: var(--pr);
+            line-height: 1
+        }
+
+        .stat .l {
+            font-size: .7rem;
+            color: var(--mu);
+            margin-top: .35rem;
+            text-transform: uppercase;
+            letter-spacing: .05em
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: .82rem
+        }
+
+        th {
+            padding: .6rem .75rem;
+            text-align: left;
+            background: var(--s2);
+            color: var(--mu);
+            font-size: .7rem;
+            text-transform: uppercase;
+            letter-spacing: .05em;
+            font-weight: 600
+        }
+
+        td {
+            padding: .6rem .75rem;
+            border-bottom: 1px solid var(--bd)
+        }
+
+        .card {
+            background: var(--s1);
+            border: 1px solid var(--bd);
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 1rem
+        }
+
+        .row {
+            display: flex;
+            gap: .6rem;
+            margin-bottom: .75rem;
+            flex-wrap: wrap;
+            align-items: center
+        }
+
+        .fi {
+            flex: 1;
+            min-width: 140px;
+            margin: 0;
+            padding: .48rem .7rem;
+            background: var(--s2);
+            border: 1px solid var(--bd);
+            border-radius: 7px;
+            color: var(--tx);
+            font-size: .8rem;
+            outline: none
+        }
+
+        .badge {
+            display: inline-block;
+            padding: .15rem .5rem;
+            border-radius: 99px;
+            font-size: .7rem;
+            font-weight: 600
+        }
+
+        .badge.green {
+            background: rgba(16, 185, 129, .15);
+            color: var(--ac)
+        }
+
+        .badge.red {
+            background: rgba(239, 68, 68, .15);
+            color: var(--er)
+        }
+
+        .badge.blue {
+            background: rgba(99, 102, 241, .15);
+            color: var(--pr)
+        }
+
+        .empty {
+            text-align: center;
+            padding: 3rem;
+            color: var(--mu);
+            font-size: .85rem
+        }
+
+        pre {
+            background: var(--s2);
+            border: 1px solid var(--bd);
+            border-radius: 8px;
+            padding: .9rem;
+            font-size: .72rem;
+            color: #7dd3fc;
+            overflow: auto;
+            max-height: 340px;
+            white-space: pre-wrap
+        }
+
+        .modal-bg {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, .6);
+            z-index: 100;
+            align-items: center;
+            justify-content: center
+        }
+
+        .modal-bg.on {
+            display: flex
+        }
+
+        .modal {
+            background: var(--s1);
+            border: 1px solid var(--bd);
+            border-radius: 14px;
+            padding: 1.5rem;
+            width: 420px;
+            max-width: 95vw
+        }
+
+        .modal h3 {
+            font-size: .95rem;
+            font-weight: 700;
+            margin-bottom: 1rem
+        }
+
+        .close {
+            float: right;
+            background: none;
+            border: none;
+            color: var(--mu);
+            cursor: pointer;
+            font-size: 1.1rem;
+            line-height: 1
+        }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+</head>
+
+<body>
+
+    <!-- AUTH GATE -->
+    <div id="gate">
+        <div class="gc">
+            <h1>🔐 Admin Panel</h1>
+            <p>Local access only — enter your admin credentials</p>
+            <label>Main App URL</label>
+            <input id="api-url" value="http://localhost:3000" />
+            <label>Email</label>
+            <input id="login-email" type="email" placeholder="admin@example.com" />
+            <label>Password</label>
+            <input id="login-pass" type="password" placeholder="••••••••" />
+            <button class="btn" onclick="login()">Sign In</button>
+            <div id="err"></div>
+        </div>
+    </div>
+
+    <!-- MAIN APP -->
+    <div id="app">
+        <div class="layout">
+            <aside>
+                <div class="sidebar-top">
+                    <h2>⚙️ Admin Panel</h2>
+                    <span id="user-label">—</span>
+                </div>
+                <nav>
+                    <div class="ni on" onclick="show('dashboard')"><span class="ic">📊</span> Dashboard</div>
+                    <div class="ni" onclick="show('users')"><span class="ic">👥</span> Users</div>
+                    <div class="ni" onclick="show('import')"><span class="ic">📁</span> Import CSV</div>
+                    <div class="ni" onclick="show('roles')"><span class="ic">🏷</span> Roles</div>
+                    <div class="ni" onclick="show('config')"><span class="ic">🔧</span> Config</div>
+                    <div class="ni" onclick="show('audit')"><span class="ic">📋</span> Audit Log</div>
+                </nav>
+                <div style="padding:1rem;border-top:1px solid var(--bd)">
+                    <button class="btn sm er" onclick="logout()">Sign Out</button>
+                </div>
+            </aside>
+            <main>
+
+                <!-- Dashboard -->
+                <div class="pg on" id="pg-dashboard">
+                    <div class="pg-header">
+                        <h2>Dashboard</h2><button class="btn sm" onclick="loadStats()">↺ Refresh</button>
+                    </div>
+                    <div class="stat-grid">
+                        <div class="stat">
+                            <div class="v" id="st-total">—</div>
+                            <div class="l">Total Users</div>
+                        </div>
+                        <div class="stat">
+                            <div class="v" id="st-active">—</div>
+                            <div class="l">Active Users</div>
+                        </div>
+                        <div class="stat">
+                            <div class="v" id="st-sessions">—</div>
+                            <div class="l">Live Sessions</div>
+                        </div>
+                        <div class="stat">
+                            <div class="v" id="st-new">—</div>
+                            <div class="l">New Today</div>
+                        </div>
+                    </div>
+                    <div class="card" style="padding:1.5rem">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+                            <h3>🔴 Live Activity Feed</h3>
+                            <span class="badge blue" id="stream-status">Connecting...</span>
+                        </div>
+                        <div id="live-feed"
+                            style="background:var(--bg);border:1px solid var(--bd);border-radius:6px;height:300px;overflow-y:auto;padding:1rem;font-family:monospace;font-size:0.75rem;color:var(--mu);display:flex;flex-direction:column;gap:0.5rem;">
+                            <!-- Activity lines go here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Users -->
+                <div class="pg" id="pg-users">
+                    <div class="pg-header">
+                        <h2>Users</h2>
+                        <div style="display:flex;gap:.5rem">
+                            <select class="fi" id="bulk-action" style="width:140px;flex:none;margin:0"
+                                onchange="document.getElementById('bulk-role').style.display = this.value === 'set_role' ? 'block' : 'none'">
+                                <option value="">Bulk Actions...</option>
+                                <option value="suspend">Suspend</option>
+                                <option value="activate">Activate</option>
+                                <option value="set_role">Set Role To</option>
+                            </select>
+                            <input class="fi" id="bulk-role" style="width:120px;flex:none;margin:0;display:none"
+                                placeholder="Role name...">
+                            <button class="btn sm" onclick="applyBulk()">Apply</button>
+                            <div style="border-left: 1px solid var(--bd); margin:0 0.5rem;"></div>
+                            <input class="fi" id="user-search" style="width:200px;flex:none" placeholder="Search email…"
+                                oninput="searchUsers()">
+                            <button class="btn sm" onclick="loadUsers()">↺</button>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width: 30px;"><input type="checkbox"
+                                            onchange="document.querySelectorAll('.u-chk').forEach(c => c.checked = this.checked)">
+                                    </th>
+                                    <th>Email</th>
+                                    <th>Role</th>
+                                    <th>Status</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="user-tbody">
+                                <tr>
+                                    <td colspan="6" class="empty">Loading…</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div style="display:flex;gap:.5rem;align-items:center;font-size:.78rem;color:var(--mu)">
+                        <button class="btn sm" onclick="userPage(-1)">←</button>
+                        <span id="user-page-info">Page 1</span>
+                        <button class="btn sm" onclick="userPage(1)">→</button>
+                    </div>
+                </div>
+
+                <!-- Import CSV -->
+                <div class="pg" id="pg-import">
+                    <div class="pg-header">
+                        <h2>Bulk Import Pipeline</h2>
+                    </div>
+                    <div class="card" style="padding:1.5rem">
+                        <div id="import-stage-1">
+                            <h3>Stage 1: Upload & Dry-Run</h3>
+                            <p style="color:var(--mu);font-size:0.8rem;margin-top:0.5rem">Upload a CSV containing:
+                                <code>email, role, firstName, lastName, password</code>.
+                            </p>
+                            <input type="file" id="csv-file" accept=".csv"
+                                style="margin-top:1rem;color:white;cursor:pointer">
+                            <button class="btn ac" style="margin-top:1rem" onclick="handleCSVUpload()">Validate Schema &
+                                Detect Clashes</button>
+                        </div>
+                        <div id="import-stage-2" style="display:none">
+                            <h3 id="import-summary-title">Validation Complete</h3>
+                            <p id="import-summary-text" style="color:var(--mu);font-size:0.8rem;margin-top:0.5rem"></p>
+                            <div
+                                style="overflow-x:auto;max-height:300px;overflow-y:auto;border:1px solid var(--bd);margin-top:1rem">
+                                <table style="margin:0">
+                                    <thead style="position:sticky;top:0;background:var(--s2)">
+                                        <tr>
+                                            <th style="width:50px">Row</th>
+                                            <th>Email</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="import-tbody"></tbody>
+                                </table>
+                            </div>
+                            <button class="btn" style="margin-top:1rem" id="import-commit-btn"
+                                onclick="commitCSV()">Commit Valid Rows</button>
+                            <button class="btn"
+                                style="margin-top:0.5rem;background:transparent;border:1px solid var(--bd);color:white"
+                                onclick="document.getElementById('import-stage-2').style.display='none';document.getElementById('import-stage-1').style.display='block'">Cancel
+                                / Retry</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Roles -->
+                <div class="pg" id="pg-roles">
+                    <div class="pg-header">
+                        <h2>Roles</h2><button class="btn sm ac" onclick="openRoleModal()">+ New Role</button>
+                    </div>
+                    <div class="card">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Default</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="role-tbody">
+                                <tr>
+                                    <td colspan="3" class="empty">Loading…</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Config -->
+                <div class="pg" id="pg-config">
+                    <div class="pg-header">
+                        <h2>System Config</h2>
+                    </div>
+                    <div class="card" style="padding:1.1rem">
+                        <div style="margin-bottom:.75rem;font-size:.8rem;color:var(--mu)">Disable Endpoints
+                            (comma-separated IDs)</div>
+                        <div class="row">
+                            <input class="fi" id="cfg-endpoints" placeholder="auth.register, auth.login, …">
+                            <button class="btn sm" onclick="saveConfig()">Save</button>
+                        </div>
+                        <div>
+                            <label style="display:flex;align-items:center;gap:.5rem;font-size:.82rem;cursor:pointer">
+                                <input type="checkbox" id="cfg-maintenance"> Maintenance Mode
+                            </label>
+                        </div>
+                        <div style="margin-top:.75rem">
+                            <input class="fi" id="cfg-msg" placeholder="Maintenance message…" style="margin:0">
+                        </div>
+                    </div>
+                    <pre id="cfg-raw">Loading…</pre>
+
+                    <div class="card" style="padding:1.1rem;margin-top:2rem">
+                        <h3 style="margin-bottom:0.25rem;font-size:1rem;color:var(--er)">⚠️ Static Source Configuration
+                        </h3>
+                        <p style="color:var(--mu);font-size:0.75rem;margin-bottom:1rem">
+                            DANGER: Saving this JSON will securely map parameters to the TypeScript AST and physically
+                            overwrite <code>config/project.config.ts</code> in the node host, forcing NextJS to
+                            recompile locally.
+                        </p>
+                        <textarea id="cfg-disk"
+                            style="width:100%;height:350px;background:var(--bg);color:#7dd3fc;border:1px solid var(--bd);padding:1rem;font-family:monospace;font-size:0.8rem;border-radius:6px;resize:vertical"
+                            spellcheck="false" placeholder="Loading hardcoded TS layout..."></textarea>
+                        <button class="btn er" style="margin-top:1rem" onclick="saveDiskConfig()">Commit & Force Next.js
+                            Recompilation</button>
+                    </div>
+                </div>
+
+                <!-- Audit Log -->
+                <div class="pg" id="pg-audit">
+                    <div class="pg-header">
+                        <h2>Audit Log</h2>
+                        <div style="display:flex;gap:.5rem">
+                            <input class="fi" id="audit-search" style="width:180px;flex:none"
+                                placeholder="Filter actor…">
+                            <button class="btn sm" onclick="loadAudit()">↺</button>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Actor</th>
+                                    <th>Action</th>
+                                    <th>Target</th>
+                                </tr>
+                            </thead>
+                            <tbody id="audit-tbody">
+                                <tr>
+                                    <td colspan="4" class="empty">Loading…</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div style="display:flex;gap:.5rem;align-items:center;font-size:.78rem;color:var(--mu)">
+                        <button class="btn sm" onclick="auditPage(-1)">←</button>
+                        <span id="audit-page-info">Page 1</span>
+                        <button class="btn sm" onclick="auditPage(1)">→</button>
+                    </div>
+                </div>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- Role Modal -->
+    <div class="modal-bg" id="role-modal">
+        <div class="modal">
+            <button class="close" onclick="closeModal('role-modal')">✕</button>
+            <h3>New Role</h3>
+            <label>Name (lowercase, no spaces)</label>
+            <input id="role-name" placeholder="moderator">
+            <label>Color (hex)</label>
+            <input id="role-color" type="color" value="#6366f1" style="height:36px;padding:.2rem">
+
+            <label>Sub-Admin Permissions</label>
+            <div
+                style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:1rem;font-size:0.8rem;background:var(--s2);padding:.6rem;border-radius:6px;border:1px solid var(--bd);">
+                <label style="cursor:pointer;margin:0"><input type="checkbox" class="perm-chk" value="view_users"> View
+                    Users</label>
+                <label style="cursor:pointer;margin:0"><input type="checkbox" class="perm-chk" value="edit_users"> Edit
+                    Users</label>
+                <label style="cursor:pointer;margin:0"><input type="checkbox" class="perm-chk" value="view_roles"> View
+                    Roles</label>
+                <label style="cursor:pointer;margin:0"><input type="checkbox" class="perm-chk" value="edit_roles"> Edit
+                    Roles</label>
+            </div>
+
+            <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;margin-bottom:.8rem">
+                <input type="checkbox" id="role-default"> Set as default role
+            </label>
+            <button class="btn" onclick="createRole()">Create Role</button>
+        </div>
+    </div>
+
+    <script>
+        let BASE = 'http://localhost:3000';
+        let TOKEN = '';
+        let _uPage = 1, _aPage = 1, _uTotal = 0, _aTotal = 0;
+
+        const $ = id => document.getElementById(id);
+        const fmt = d => new Date(d).toLocaleString();
+
+        async function api(path, opts = {}) {
+            const r = await fetch(BASE + path, {
+                ...opts,
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + TOKEN, ...(opts.headers || {}) },
+            });
+            return r.json();
+        }
+
+        async function login() {
+            BASE = $('api-url').value.replace(/\/$/, '');
+            const r = await api('/api/auth/login', {
+                method: 'POST',
+                body: JSON.stringify({ identifier: $('login-email').value, password: $('login-pass').value }),
+            }).catch(() => null);
+            if (!r || !r.success) { $('err').textContent = r?.error || 'Login failed'; return; }
+            if (r.data.user.role !== 'admin') { $('err').textContent = 'Not an admin account'; return; }
+            TOKEN = r.data.accessToken;
+            $('user-label').textContent = r.data.user.email;
+            $('gate').style.display = 'none';
+            $('app').style.display = 'block';
+            loadStats(); loadUsers(); loadRoles(); loadAudit(); loadConfig(); connectStream();
+        }
+
+        function logout() {
+            if (_streamCtrl) _streamCtrl.abort();
+            api('/api/auth/logout', { method: 'POST' }).catch(() => { });
+            TOKEN = ''; $('gate').style.display = ''; $('app').style.display = 'none';
+        }
+
+        function show(id) {
+            document.querySelectorAll('.pg').forEach(p => p.classList.remove('on'));
+            document.querySelectorAll('.ni').forEach(n => n.classList.remove('on'));
+            $('pg-' + id).classList.add('on');
+            event.currentTarget.classList.add('on');
+        }
+
+        // ── Dashboard ──────────────────────────────────────────────────────────────────
+        async function loadStats() {
+            const r = await api('/api/admin/stats');
+            if (!r.success) return;
+            const d = r.data;
+            $('st-total').textContent = d.totalUsers;
+            $('st-active').textContent = d.activeUsers;
+            $('st-sessions').textContent = d.totalSessions;
+            $('st-new').textContent = d.newToday;
+        }
+
+        let _streamCtrl = null;
+        async function connectStream() {
+            if (_streamCtrl) _streamCtrl.abort();
+            _streamCtrl = new AbortController();
+            $('stream-status').textContent = 'Connecting...';
+            $('stream-status').className = 'badge am';
+
+            try {
+                const res = await fetch(BASE + '/api/admin/activity/stream', {
+                    headers: { 'Authorization': 'Bearer ' + TOKEN },
+                    signal: _streamCtrl.signal
+                });
+                $('stream-status').textContent = 'Live';
+                $('stream-status').className = 'badge red'; // recording indicator
+
+                const reader = res.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    buffer += decoder.decode(value, { stream: true });
+                    let lines = buffer.split('\\n\\n');
+                    buffer = lines.pop(); // keep last incomplete chunk
+
+                    for (let chunk of lines) {
+                        if (chunk.trim() === ':') continue; // keepalive
+                        if (chunk.startsWith('data: ')) {
+                            const data = JSON.parse(chunk.substring(6));
+                            if (data.type === 'stat_update') {
+                                $('st-total').textContent = data.totalUsers; // dynamic ping
+                            } else if (data.type === 'audit') {
+                                const feed = $('live-feed');
+                                const line = document.createElement('div');
+                                line.innerHTML = `<span style="color:#7dd3fc">[${new Date(data.log.createdAt).toLocaleTimeString()}]</span> <span style="color:var(--tx)">${data.log.actor}</span> executed <strong style="color:var(--pr)">${data.log.actionType}</strong> on ${data.log.targetId}`;
+                                feed.prepend(line);
+                                if (feed.children.length > 50) feed.lastChild.remove();
+                            }
+                        }
+                    }
+                }
+            } catch (e) {
+                if (e.name !== 'AbortError') {
+                    $('stream-status').textContent = 'Disconnected';
+                    $('stream-status').className = 'badge mu';
+                    setTimeout(connectStream, 4000);
+                }
+            }
+        }
+
+        // ── Users ──────────────────────────────────────────────────────────────────────
+        let _uSearch = '';
+        async function loadUsers() {
+            const r = await api(`/api/admin/users?page=${_uPage}&limit=15&search=${encodeURIComponent(_uSearch)}`);
+            if (!r.success) return;
+            _uTotal = r.data.total;
+            $('user-page-info').textContent = `Page ${_uPage} of ${Math.max(1, Math.ceil(_uTotal / 15))}`;
+            const rows = r.data.users.map(u => `
+    <tr>
+      <td><input type="checkbox" class="u-chk" value="${u._id}"></td>
+      <td>${u.email}</td>
+      <td><span class="badge blue">${u.role}</span></td>
+      <td><span class="badge ${u.isActive ? 'green' : 'red'}">${u.isActive ? 'Active' : 'Disabled'}</span></td>
+      <td>${fmt(u.createdAt)}</td>
+      <td><button class="btn sm ${u.isActive ? 'er' : 'ac'}" onclick="toggleUser('${u._id}',${!u.isActive})">${u.isActive ? 'Disable' : 'Enable'}</button></td>
+    </tr>`).join('');
+            $('user-tbody').innerHTML = rows || '<tr><td colspan="6" class="empty">No users found</td></tr>';
+        }
+        function searchUsers() { _uSearch = $('user-search').value; _uPage = 1; loadUsers(); }
+        function userPage(d) { _uPage = Math.max(1, _uPage + d); loadUsers(); }
+        async function toggleUser(id, active) {
+            await api(`/api/admin/users/${id}`, { method: 'PATCH', body: JSON.stringify({ isActive: active }) });
+            loadUsers();
+        }
+
+        async function applyBulk() {
+            const action = $('bulk-action').value;
+            if (!action) return;
+            const ids = Array.from(document.querySelectorAll('.u-chk:checked')).map(c => c.value);
+            if (!ids.length) return alert('No users selected for bulk action.');
+            if (!confirm(`Apply ${action} to ${ids.length} selected users?`)) return;
+
+            const payload = { action, userIds: ids };
+            if (action === 'set_role') {
+                payload.role = $('bulk-role').value.trim();
+                if (!payload.role) return alert('Enter target role name.');
+            }
+            const r = await api('/api/admin/users/bulk', { method: 'POST', body: JSON.stringify(payload) });
+            if (r.success) { alert('Bulk action applied!'); loadUsers(); }
+            else alert(r.error || r.message);
+        }
+
+        // ── Import CSV ─────────────────────────────────────────────────────────────────
+        let _validImportRows = [];
+        async function handleCSVUpload() {
+            const file = $('csv-file').files[0];
+            if (!file) return alert('Select a CSV file');
+
+            const text = await file.text();
+            $('import-stage-1').style.display = 'none';
+            $('import-stage-2').style.display = 'block';
+            $('import-summary-title').textContent = 'Validating...';
+            $('import-summary-text').textContent = '';
+            $('import-tbody').innerHTML = '<tr><td colspan="3" class="empty">Evaluating...</td></tr>';
+            $('import-commit-btn').style.display = 'none';
+
+            const r = await api('/api/admin/import/dry-run', { method: 'POST', body: JSON.stringify({ csvData: text }) });
+            if (!r.success) {
+                $('import-summary-title').textContent = 'Validation Failed';
+                $('import-summary-text').textContent = r.error || r.message;
+                return;
+            }
+
+            const { report, summary } = r.data;
+            $('import-summary-title').textContent = `Dry-Run Complete: ${summary.valid} Valid, ${summary.conflicts} Conflicts, ${summary.invalid} Invalid`;
+            $('import-summary-text').textContent = 'Only valid rows will be committed to the database.';
+
+            _validImportRows = report.filter(x => x.status === 'valid').map(x => x.data);
+
+            if (_validImportRows.length > 0) {
+                $('import-commit-btn').style.display = 'block';
+                $('import-commit-btn').textContent = `Commit ${_validImportRows.length} Valid Rows`;
+            }
+
+            const rowsHtml = report.map(x => {
+                let badgeClass = 'green', text = 'Valid';
+                if (x.status.startsWith('conflict')) { badgeClass = 'am'; text = x.errors?.[0] || 'Conflict'; }
+                if (x.status === 'invalid_schema') { badgeClass = 'red'; text = x.errors?.[0] || 'Schema Error'; }
+                return `<tr><td>${x.line}</td><td>${x.data.email || '—'}</td><td><span class="badge ${badgeClass}">${text}</span></td></tr>`;
+            }).join('');
+            $('import-tbody').innerHTML = rowsHtml;
+        }
+
+        async function commitCSV() {
+            if (!_validImportRows.length) return;
+            $('import-commit-btn').disabled = true;
+            $('import-commit-btn').textContent = 'Committing...';
+            const r = await api('/api/admin/import/commit', { method: 'POST', body: JSON.stringify({ users: _validImportRows }) });
+            $('import-commit-btn').disabled = false;
+
+            if (r.success) {
+                alert(`Success! ${r.data.insertedCount} users imported.`);
+                $('import-stage-2').style.display = 'none';
+                $('import-stage-1').style.display = 'block';
+                $('csv-file').value = '';
+                loadUsers();
+            } else {
+                alert(r.error || r.message);
+            }
+        }
+
+        // ── Roles ──────────────────────────────────────────────────────────────────────
+        async function loadRoles() {
+            const r = await api('/api/admin/roles');
+            if (!r.success) return;
+            const rows = r.data.map(ro => `
+    <tr>
+      <td>${ro.name}${ro.color ? ` <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${ro.color};vertical-align:middle"></span>` : ''}</td>
+      <td>${ro.isDefault ? '<span class="badge green">Default</span>' : '—'}</td>
+      <td>${!ro.isDefault ? `<button class="btn sm er" onclick="deleteRole('${ro._id}')">Delete</button>` : '—'}</td>
+    </tr>`).join('');
+            $('role-tbody').innerHTML = rows || '<tr><td colspan="3" class="empty">No roles</td></tr>';
+        }
+        function openRoleModal() { $('role-modal').classList.add('on'); }
+        function closeModal(id) { $(id).classList.remove('on'); }
+        async function createRole() {
+            const perms = {};
+            document.querySelectorAll('.perm-chk:checked').forEach(c => perms[c.value] = true);
+            const r = await api('/api/admin/roles', {
+                method: 'POST',
+                body: JSON.stringify({ name: $('role-name').value, color: $('role-color').value, isDefault: $('role-default').checked, permissions: perms }),
+            });
+            if (r.success) { closeModal('role-modal'); loadRoles(); }
+            else alert(r.error || 'Failed');
+        }
+        async function deleteRole(id) {
+            if (!confirm('Delete this role?')) return;
+            await api(`/api/admin/roles/${id}`, { method: 'DELETE' });
+            loadRoles();
+        }
+
+        // ── Config ─────────────────────────────────────────────────────────────────────
+        async function loadConfig() {
+            const r = await api('/api/admin/config');
+            if (r.success) {
+                const c = r.data;
+                $('cfg-endpoints').value = (c.disabled_endpoints || []).join(', ');
+                $('cfg-maintenance').checked = !!c.maintenance_mode;
+                $('cfg-msg').value = c.maintenance_message || '';
+                $('cfg-raw').textContent = JSON.stringify(c, null, 2);
+            }
+
+            const rd = await api('/api/admin/config/disk');
+            if (rd.success) {
+                $('cfg-disk').value = JSON.stringify(rd.data, null, 4);
+            }
+        }
+        async function saveConfig() {
+            const eps = $('cfg-endpoints').value.split(',').map(s => s.trim()).filter(Boolean);
+            const r = await api('/api/admin/config', {
+                method: 'PATCH',
+                body: JSON.stringify({ disabled_endpoints: eps, maintenance_mode: $('cfg-maintenance').checked, maintenance_message: $('cfg-msg').value }),
+            });
+            if (r.success) loadConfig();
+            else alert(r.error || 'Failed to save');
+        }
+        async function saveDiskConfig() {
+            if (!confirm('WARNING: THIS WILL REWRITE SOURCE CODE. Continue?')) return;
+            try {
+                const payload = JSON.parse($('cfg-disk').value);
+                const r = await api('/api/admin/config/disk', { method: 'PATCH', body: JSON.stringify(payload) });
+                if (r.success) {
+                    alert('Source code overwritten! Next.js is rebuilding...');
+                    loadConfig();
+                } else alert(r.error || r.message);
+            } catch (e) {
+                alert('Invalid JSON syntax: ' + e.message);
+            }
+        }
+
+        // ── Audit ──────────────────────────────────────────────────────────────────────
+        async function loadAudit() {
+            const actor = $('audit-search').value;
+            const r = await api(`/api/admin/audit?page=${_aPage}&limit=20&actor=${encodeURIComponent(actor)}`);
+            if (!r.success) return;
+            _aTotal = r.data.total;
+            $('audit-page-info').textContent = `Page ${_aPage} of ${Math.max(1, Math.ceil(_aTotal / 20))}`;
+            const rows = r.data.logs.map(l => `
+    <tr>
+      <td style="white-space:nowrap">${fmt(l.timestamp)}</td>
+      <td>${l.actor || '—'}</td>
+      <td><span class="badge blue">${l.actionType}</span></td>
+      <td>${l.targetId || '—'}</td>
+    </tr>`).join('');
+            $('audit-tbody').innerHTML = rows || '<tr><td colspan="4" class="empty">No logs</td></tr>';
+        }
+        function auditPage(d) { _aPage = Math.max(1, _aPage + d); loadAudit(); }
+    </script>
+</body>
+
+</html>
