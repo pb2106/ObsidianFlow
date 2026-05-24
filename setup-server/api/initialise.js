@@ -46,6 +46,7 @@ module.exports = async function initialise(req, res) {
         const adminToken = crypto.randomBytes(32).toString('hex');
         const nextAuthSecret = crypto.randomBytes(32).toString('hex');
         const aesKey = crypto.randomBytes(32).toString('hex');
+        const revalidateSecret = crypto.randomBytes(32).toString('hex');
         step('Secrets generated ✓');
 
         // ── 2. Generate admin slug ───────────────────────────────────────────────
@@ -143,6 +144,7 @@ export type ProjectConfig = typeof projectConfig;
             `NEXTAUTH_SECRET=${nextAuthSecret}`,
             `NEXTAUTH_URL=${cfg.baseUrl}`,
             `AES_ENCRYPTION_KEY=${aesKey}`,
+            `REVALIDATE_SECRET=${revalidateSecret}`,
             `NODE_ENV=development`,
             '',
             '# OAuth (fill in if enabled)',
@@ -155,6 +157,17 @@ export type ProjectConfig = typeof projectConfig;
         ].join('\n');
         fs.writeFileSync(envPath, envContent, 'utf8');
         step('.env.local written ✓');
+
+        // ── 4b. Write admin-app/.env ─────────────────────────────────────────────
+        step('Writing admin-app/.env…');
+        const adminEnvPath = path.join(ROOT, 'admin-app', '.env');
+        const adminEnvContent = [
+            `MAIN_APP_URL=${cfg.baseUrl}`,
+            `REVALIDATE_SECRET=${revalidateSecret}`,
+            `ADMIN_PORT=3002`
+        ].join('\n');
+        fs.writeFileSync(adminEnvPath, adminEnvContent, 'utf8');
+        step('admin-app/.env written ✓');
 
         // ── 5. Connect to MongoDB and seed ───────────────────────────────────────
         step('Connecting to MongoDB…');

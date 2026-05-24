@@ -10,10 +10,12 @@ import RoleModel from '@/models/role.model';
 import { withPermission } from '@/lib/middleware/withRole';
 import { AuthedRequest } from '@/lib/middleware/withAuth';
 import { ok, fail, validationError, secureHeaders } from '@/lib/api/response';
+import { sanitiseBody } from '@/lib/security/sanitise';
+import { revalidateTag } from 'next/cache';
 
 const createSchema = z.object({
-    name: z.string().min(1).max(32).regex(/^[a-z0-9_]+$/, 'Lowercase alphanumeric and underscores only'),
-    color: z.string().regex(/^#[0-9a-f]{6}$/i, 'Must be a hex color').optional(),
+    name: z.string().trim().min(1).max(32).regex(/^[a-z0-9_]+$/, 'Lowercase alphanumeric and underscores only'),
+    color: z.string().trim().max(7).regex(/^#[0-9a-f]{6}$/i, 'Must be a hex color').optional(),
     isDefault: z.boolean().optional(),
     permissions: z.record(z.string(), z.boolean()).optional(),
 });
@@ -27,7 +29,14 @@ async function getHandler(_req: AuthedRequest) {
 async function postHandler(req: AuthedRequest) {
     await connectDB();
 
-    const body = await req.json().catch(() => null);
+    let body = await req.json().catch(() => null);
+
+    try {
+        body = sanitiseBody(body);
+    } catch (err: any) {
+        return fail(err.message, 'SECURITY_VIOLATION', 400);
+    }
+
     const parsed = createSchema.safeParse(body);
     if (!parsed.success) return validationError(parsed.error);
 
@@ -41,6 +50,7 @@ async function postHandler(req: AuthedRequest) {
 
     // @ts-ignore
     const role = await RoleModel.create(parsed.data);
+    revalidateTag('roles');
     return secureHeaders(ok(role, 'Role created', 201));
 }
 

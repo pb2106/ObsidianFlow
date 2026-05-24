@@ -1,3 +1,4 @@
+// RULE: dangerouslySetInnerHTML is banned in this codebase. All user data renders through JSX only.
 import type { Metadata } from 'next';
 import { AuthProvider } from '@/lib/auth/context';
 import { ThemeProvider } from '@/components/ui/ThemeProvider';

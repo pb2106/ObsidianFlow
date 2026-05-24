@@ -11,6 +11,7 @@ import { authRateLimit } from '@/lib/middleware/rateLimit';
 import { endpointGuard } from '@/lib/middleware/endpointGuard';
 import { projectConfig } from '@/config/project.config';
 import { AuthError } from '@/lib/auth/providers/email';
+import { sanitiseBody } from '@/lib/security/sanitise';
 
 export const endpointMeta = {
     id: 'auth.login',
@@ -23,7 +24,14 @@ export const endpointMeta = {
 };
 
 async function handler(req: NextRequest) {
-    const body = await req.json().catch(() => null);
+    let body = await req.json().catch(() => null);
+
+    try {
+        body = sanitiseBody(body);
+    } catch (err: any) {
+        return fail(err.message, 'SECURITY_VIOLATION', 400);
+    }
+
     const parsed = loginSchema.safeParse(body);
     if (!parsed.success) return validationError(parsed.error);
 
@@ -33,14 +41,6 @@ async function handler(req: NextRequest) {
 
     try {
         const result = await loginWithEmail({ identifier, password, ip, userAgent });
-
-        if (result.requires2FA) {
-            return ok({
-                requires2FA: true,
-                tempToken: result.tempToken,
-                user: result.user
-            }, '2FA Required');
-        }
 
         const maxAge = projectConfig.auth.rememberMe.enabled
             ? projectConfig.auth.rememberMe.days * 24 * 60 * 60

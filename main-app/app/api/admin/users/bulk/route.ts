@@ -5,6 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidateTag } from 'next/cache';
 import { connectDB } from '@/lib/db/connect';
 import UserModel from '@/models/user.model';
 import RoleModel from '@/models/role.model';
@@ -66,6 +67,9 @@ async function handler(req: AuthedRequest) {
         { _id: { $in: userIds }, isDeleted: false },
         { $set: updateQuery }
     );
+
+    revalidateTag('users');
+    if (action === 'set_role') revalidateTag('roles');
 
     return secureHeaders(ok({ modifiedCount: result.modifiedCount }, `Bulk ${action} applied successfully`));
 }

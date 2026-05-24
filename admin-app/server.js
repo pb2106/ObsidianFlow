@@ -11,8 +11,15 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 
+require('dotenv').config({ path: path.join(__dirname, '.env') });
+
 const PORT = parseInt(process.env.ADMIN_PORT || '3002');
 const app = express();
+
+if (!process.env.MAIN_APP_URL || !process.env.REVALIDATE_SECRET) {
+    console.warn('\n[admin-app] ⚠️ WARNING: MAIN_APP_URL or REVALIDATE_SECRET is missing from admin-app/.env');
+    console.warn('[admin-app] Cache revalidation after data mutations will fail silently!\n');
+}
 
 app.use(express.json());
 

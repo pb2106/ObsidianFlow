@@ -6,21 +6,21 @@
 
 import { z } from 'zod';
 import { projectConfig } from '@/config/project.config';
+import { validateEmail, validatePassword } from '@/lib/security/sanitise';
 
 const pwdRules = projectConfig.auth.passwordRules;
 
 // ─── Password schema (reused) ─────────────────────────────────────────────────
 export const passwordSchema = z
     .string()
-    .min(pwdRules.minLength, `Password must be at least ${pwdRules.minLength} characters`)
-    .refine(
-        val => !pwdRules.requireNumber || /\d/.test(val),
-        'Password must contain at least one number'
-    )
-    .refine(
-        val => !pwdRules.requireSpecialChar || /[^a-zA-Z0-9]/.test(val),
-        'Password must contain at least one special character'
-    );
+    .trim()
+    .max(128, 'Password cannot exceed 128 characters')
+    .superRefine((val, ctx) => {
+        const error = validatePassword(val);
+        if (error) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: error });
+        }
+    });
 
 // ─── Register schema (dynamic) ────────────────────────────────────────────────
 function buildRegisterSchema() {
@@ -29,19 +29,19 @@ function buildRegisterSchema() {
 
     // Core fields always required
     const base: Record<string, z.ZodTypeAny> = {
-        email: z.string().email('Invalid email address'),
+        email: z.string().trim().max(254, 'Email too long').email('Invalid email address').refine(validateEmail, 'RFC5322 Email Validation Failed'),
         password: passwordSchema,
     };
 
     // Standard fields
     const fieldSchemas: Record<string, z.ZodTypeAny> = {
-        firstName: z.string().min(1, 'First name required'),
-        lastName: z.string().min(1).optional(),
-        username: z.string().min(3, 'Username must be at least 3 characters').regex(/^[a-zA-Z0-9_]+$/, 'Only letters, numbers, underscores').optional(),
-        phone: z.string().min(7, 'Invalid phone number').optional(),
-        dateOfBirth: z.string().optional(),
-        avatar: z.string().url().optional(),
-        company: z.string().optional(),
+        firstName: z.string().trim().max(500).min(1, 'First name required'),
+        lastName: z.string().trim().max(500).min(1).optional(),
+        username: z.string().trim().max(50).min(3, 'Username must be at least 3 characters').regex(/^[a-zA-Z0-9_\-]+$/, 'Only alphanumeric, underscores, and hyphens').optional(),
+        phone: z.string().trim().max(50).min(7, 'Invalid phone number').optional(),
+        dateOfBirth: z.string().trim().max(50).optional(),
+        avatar: z.string().trim().max(500).url().optional(),
+        company: z.string().trim().max(500).optional(),
     };
 
     for (const [key, cfg] of Object.entries(std)) {
@@ -53,10 +53,10 @@ function buildRegisterSchema() {
 
     // Custom fields
     const customTypeMap: Record<string, z.ZodTypeAny> = {
-        text: z.string(),
+        text: z.string().trim().max(500),
         number: z.number(),
-        date: z.string(),
-        select: z.string(),
+        date: z.string().trim().max(50),
+        select: z.string().trim().max(500),
         checkbox: z.boolean(),
     };
 
@@ -75,23 +75,23 @@ export type RegisterInput = z.infer<typeof registerSchema>;
 
 // ─── Login schema ─────────────────────────────────────────────────────────────
 export const loginSchema = z.object({
-    identifier: z.string().min(1, 'Email or username required'),
-    password: z.string().min(1, 'Password required'),
+    identifier: z.string().trim().max(254).min(1, 'Email or username required'),
+    password: z.string().trim().max(128).min(1, 'Password required'),
     rememberMe: z.boolean().optional(),
 });
 
 // ─── Forgot password ──────────────────────────────────────────────────────────
 export const forgotPasswordSchema = z.object({
-    email: z.string().email(),
+    email: z.string().trim().max(254).email().refine(validateEmail, 'RFC5322 validation failed'),
 });
 
 // ─── Reset password ───────────────────────────────────────────────────────────
 export const resetPasswordSchema = z.object({
-    token: z.string().min(1),
+    token: z.string().trim().length(64, 'Token must be exactly 64 characters').regex(/^[0-9a-f]+$/i, 'Token format invalid'),
     password: passwordSchema,
 });
 
 // ─── Verify email ─────────────────────────────────────────────────────────────
 export const verifyEmailSchema = z.object({
-    token: z.string().min(1),
+    token: z.string().trim().max(500).min(1),
 });

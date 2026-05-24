@@ -12,6 +12,7 @@ import { resetPasswordSchema } from '@/lib/api/schemas';
 import { ok, fail, validationError, secureHeaders } from '@/lib/api/response';
 import { authRateLimit } from '@/lib/middleware/rateLimit';
 import { endpointGuard } from '@/lib/middleware/endpointGuard';
+import { sanitiseBody } from '@/lib/security/sanitise';
 
 export const endpointMeta = {
     id: 'auth.reset-password',
@@ -26,7 +27,14 @@ export const endpointMeta = {
 async function handler(req: NextRequest) {
     await connectDB();
 
-    const body = await req.json().catch(() => null);
+    let body = await req.json().catch(() => null);
+
+    try {
+        body = sanitiseBody(body);
+    } catch (err: any) {
+        return fail(err.message, 'SECURITY_VIOLATION', 400);
+    }
+
     const parsed = resetPasswordSchema.safeParse(body);
     if (!parsed.success) return validationError(parsed.error);
 
@@ -55,4 +63,4 @@ async function handler(req: NextRequest) {
     return secureHeaders(ok(null, 'Password reset successful. Please log in with your new password.'));
 }
 
-export const POST = endpointGuard(endpointMeta.id, authRateLimit()(handler));
+export const POST = endpointGuard(endpointMeta.id, authRateLimit(handler as any));

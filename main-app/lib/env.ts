@@ -46,6 +46,12 @@ const SPECS: EnvSpec[] = [
             return 'Must be 64-char hex or 44-char base64 (32-byte key)';
         },
     },
+    {
+        key: 'REVALIDATE_SECRET',
+        required: true,
+        secret: true,
+        validate: v => v.length >= 32 ? null : 'Revalidate secret must be sufficiently strong.',
+    },
     // App URL
     {
         key: 'NEXTAUTH_URL',

@@ -5,6 +5,7 @@
  */
 
 import { z } from 'zod';
+import { revalidateTag } from 'next/cache';
 import { connectDB } from '@/lib/db/connect';
 import SystemConfigModel from '@/models/system_config.model';
 import { withPermission } from '@/lib/middleware/withRole';
@@ -37,6 +38,9 @@ async function patchHandler(req: AuthedRequest) {
         { $set: parsed.data },
         { new: true, upsert: false }
     );
+
+    if (parsed.data.disabled_endpoints) revalidateTag('endpoints');
+    if (parsed.data.maintenance_mode !== undefined) revalidateTag('system');
 
     return secureHeaders(ok(cfg, 'Config updated'));
 }

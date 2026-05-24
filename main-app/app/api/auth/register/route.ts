@@ -14,6 +14,7 @@ import { ok, fail, validationError, secureHeaders } from '@/lib/api/response';
 import { authRateLimit } from '@/lib/middleware/rateLimit';
 import { endpointGuard } from '@/lib/middleware/endpointGuard';
 import { projectConfig } from '@/config/project.config';
+import { sanitiseBody } from '@/lib/security/sanitise';
 
 export const endpointMeta = {
     id: 'auth.register',
@@ -28,11 +29,18 @@ export const endpointMeta = {
 async function handler(req: NextRequest) {
     await connectDB();
 
-    const body = await req.json().catch(() => null);
+    let body = await req.json().catch(() => null);
+
+    try {
+        body = sanitiseBody(body);
+    } catch (err: any) {
+        return fail(err.message, 'SECURITY_VIOLATION', 400);
+    }
+
     const parsed = registerSchema.safeParse(body);
     if (!parsed.success) return validationError(parsed.error);
 
-    const data = parsed.data;
+    const data = parsed.data as Record<string, any>;
 
     // Check duplicate email
     const existing = await UserModel.findOne({ email: data.email.toLowerCase() });
@@ -109,4 +117,4 @@ async function handler(req: NextRequest) {
     return secureHeaders(res);
 }
 
-export const POST = endpointGuard(endpointMeta.id, authRateLimit()(handler));
+export const POST = endpointGuard(endpointMeta.id, authRateLimit(handler as any));

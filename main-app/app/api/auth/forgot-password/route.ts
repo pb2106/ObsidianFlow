@@ -9,9 +9,10 @@ import { connectDB } from '@/lib/db/connect';
 import UserModel from '@/models/user.model';
 import { generateResetToken } from '@/lib/auth/password';
 import { forgotPasswordSchema } from '@/lib/api/schemas';
-import { ok, validationError, secureHeaders } from '@/lib/api/response';
+import { ok, fail, validationError, secureHeaders } from '@/lib/api/response';
 import { authRateLimit } from '@/lib/middleware/rateLimit';
 import { endpointGuard } from '@/lib/middleware/endpointGuard';
+import { sanitiseBody } from '@/lib/security/sanitise';
 
 export const endpointMeta = {
     id: 'auth.forgot-password',
@@ -26,7 +27,13 @@ export const endpointMeta = {
 async function handler(req: NextRequest) {
     await connectDB();
 
-    const body = await req.json().catch(() => null);
+    let body = await req.json().catch(() => null);
+    try {
+        body = sanitiseBody(body);
+    } catch (err: any) {
+        return fail(err.message, 'SECURITY_VIOLATION', 400);
+    }
+
     const parsed = forgotPasswordSchema.safeParse(body);
     if (!parsed.success) return validationError(parsed.error);
 
@@ -54,8 +61,8 @@ async function handler(req: NextRequest) {
             ));
         }
     }
-
+    await new Promise(r => setTimeout(r, 200));
     return secureHeaders(successResponse);
 }
 
-export const POST = endpointGuard(endpointMeta.id, authRateLimit()(handler));
+export const POST = endpointGuard(endpointMeta.id, authRateLimit(handler as any));

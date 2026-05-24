@@ -12,13 +12,18 @@ import { AuthedRequest } from '@/lib/middleware/withAuth';
 import { ok, fail, validationError, secureHeaders } from '@/lib/api/response';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
+import { sanitiseBody, validatePassword, validateEmail } from '@/lib/security/sanitise';
+import { revalidateTag } from 'next/cache';
 
 const userSchema = z.object({
-    email: z.string().email().toLowerCase().trim(),
-    role: z.string(),
-    firstName: z.string().optional().default(''),
-    lastName: z.string().optional().default(''),
-    password: z.string(),
+    email: z.string().trim().max(254).email().refine(validateEmail, 'RFC5322 validation failed'),
+    role: z.string().trim().max(50),
+    firstName: z.string().trim().max(500).optional().default(''),
+    lastName: z.string().trim().max(500).optional().default(''),
+    password: z.string().trim().max(128).superRefine((val, ctx) => {
+        const error = validatePassword(val);
+        if (error) ctx.addIssue({ code: z.ZodIssueCode.custom, message: error });
+    }),
 });
 
 const commitSchema = z.object({
@@ -28,6 +33,21 @@ const commitSchema = z.object({
 async function handler(req: AuthedRequest) {
     await connectDB();
     const body = await (req as NextRequest).json().catch(() => null);
+
+    if (!body || !Array.isArray(body?.users)) return fail('Invalid payload', 'BAD_REQUEST', 400);
+
+    const cleanUsers = [];
+    const errorReport = [];
+
+    for (let i = 0; i < body.users.length; i++) {
+        try {
+            cleanUsers.push(sanitiseBody(body.users[i]));
+        } catch (err: any) {
+            errorReport.push({ row: i + 1, error: err.message });
+        }
+    }
+
+    body.users = cleanUsers;
     const parsed = commitSchema.safeParse(body);
     if (!parsed.success) return validationError(parsed.error);
 
@@ -56,9 +76,14 @@ async function handler(req: AuthedRequest) {
     }));
 
     // Bulk execute
-    const result = await UserModel.insertMany(hashedUsers, { ordered: false });
+    let result = [];
+    if (hashedUsers.length > 0) {
+        result = await UserModel.insertMany(hashedUsers, { ordered: false });
+    }
 
-    return secureHeaders(ok({ insertedCount: result.length }, `Successfully imported ${result.length} users`));
+    revalidateTag('users');
+
+    return secureHeaders(ok({ insertedCount: result.length, errors: errorReport }, `Successfully imported ${result.length} users. ${errorReport.length} failed security checks.`));
 }
 
 export const POST = withPermission('add_users', handler as Parameters<typeof withPermission>[1]);
