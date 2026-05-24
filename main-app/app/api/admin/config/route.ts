@@ -10,13 +10,14 @@ import { connectDB } from '@/lib/db/connect';
 import SystemConfigModel from '@/models/system_config.model';
 import { withPermission } from '@/lib/middleware/withRole';
 import { AuthedRequest } from '@/lib/middleware/withAuth';
-import { ok, validationError, secureHeaders } from '@/lib/api/response';
+import { ok, validationError, secureHeaders, fail } from '@/lib/api/response';
+import { sanitiseBody } from '@/lib/security/sanitise';
 
 const patchSchema = z.object({
-    disabled_endpoints: z.array(z.string()).optional(),
+    disabled_endpoints: z.array(z.string().trim().max(500)).optional(),
     maintenance_mode: z.boolean().optional(),
-    maintenance_message: z.string().max(500).optional(),
-    maintenance_back_at: z.string().datetime().optional(),
+    maintenance_message: z.string().trim().max(500).optional(),
+    maintenance_back_at: z.string().trim().max(50).datetime().optional(),
     runtime_config: z.record(z.string(), z.unknown()).optional(),
 });
 
@@ -29,7 +30,14 @@ async function getHandler(_req: AuthedRequest) {
 async function patchHandler(req: AuthedRequest) {
     await connectDB();
 
-    const body = await req.json().catch(() => null);
+    let body = await req.json().catch(() => null);
+
+    try {
+        body = sanitiseBody(body);
+    } catch (err: any) {
+        return fail(err.message, 'SECURITY_VIOLATION', 400);
+    }
+
     const parsed = patchSchema.safeParse(body);
     if (!parsed.success) return validationError(parsed.error);
 

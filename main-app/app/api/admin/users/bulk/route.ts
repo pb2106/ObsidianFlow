@@ -12,12 +12,13 @@ import RoleModel from '@/models/role.model';
 import { withPermission } from '@/lib/middleware/withRole';
 import { AuthedRequest } from '@/lib/middleware/withAuth';
 import { ok, fail, validationError, secureHeaders } from '@/lib/api/response';
+import { sanitiseBody } from '@/lib/security/sanitise';
 import { z } from 'zod';
 
 const bulkSchema = z.object({
-    userIds: z.array(z.string()).min(1),
+    userIds: z.array(z.string().trim().max(256)).min(1),
     action: z.enum(['suspend', 'activate', 'set_role']),
-    role: z.string().optional()
+    role: z.string().trim().max(50).optional()
 }).refine(data => {
     if (data.action === 'set_role' && !data.role) return false;
     return true;
@@ -26,7 +27,14 @@ const bulkSchema = z.object({
 async function handler(req: AuthedRequest) {
     await connectDB();
 
-    const body = await (req as NextRequest).json().catch(() => null);
+    let body = await (req as NextRequest).json().catch(() => null);
+
+    try {
+        body = sanitiseBody(body);
+    } catch (err: any) {
+        return fail(err.message, 'SECURITY_VIOLATION', 400);
+    }
+
     const parsed = bulkSchema.safeParse(body);
     if (!parsed.success) return validationError(parsed.error);
 
