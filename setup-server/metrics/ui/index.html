@@ -281,6 +281,58 @@
             width: auto;
             padding: .5rem 1.5rem;
         }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            text-align: left;
+            padding: 0.8rem;
+            border-bottom: 1px solid var(--bd);
+            font-size: 0.8rem;
+        }
+
+        th {
+            color: var(--mu);
+            font-weight: 600;
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 9999px;
+            font-size: 0.7rem;
+            font-weight: 500;
+        }
+
+        .badge.blue {
+            background: rgba(99, 102, 241, 0.1);
+            color: #818cf8;
+            border: 1px solid rgba(99, 102, 241, 0.2);
+        }
+
+        .badge.green {
+            background: rgba(16, 185, 129, 0.1);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .badge.red {
+            background: rgba(239, 68, 68, 0.1);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .badge.am {
+            background: rgba(245, 158, 11, 0.1);
+            color: #fbbf24;
+            border: 1px solid rgba(245, 158, 11, 0.2);
+        }
     </style>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
 </head>
@@ -315,6 +367,11 @@
                 <span class="ni" onclick="show('users')">God Mode Overrides</span>
                 <span class="ni" onclick="show('killswitch')">Killswitches</span>
                 <span class="ni" onclick="show('logs')">Raw System Logs</span>
+                <!-- Admin UI Transplants -->
+                <span class="ni" onclick="show('ad-users')">👥 User Directory</span>
+                <span class="ni" onclick="show('ad-import')">📁 CSV Importer</span>
+                <span class="ni" onclick="show('ad-roles')">🏷 Role Configuration</span>
+                <span class="ni" onclick="show('ad-config')">🔧 Config Modules</span>
             </aside>
 
             <main>
@@ -454,6 +511,109 @@
                     <pre id="r-events">Click Load.</pre>
                 </div>
 
+                <!-- ==================== ADMIN TRANSPLANTS ==================== -->
+                <!-- Users -->
+                <div class="pg" id="pg-ad-users">
+                    <h2>User Directory</h2>
+                    <div class="card">
+                        <div class="row"
+                            style="margin-bottom:0.8rem;gap:0.5rem;border-bottom:1px solid var(--bd);padding-bottom:1rem;">
+                            <select class="fi" id="bulk-action" style="flex:0 0 140px;margin:0"
+                                onchange="document.getElementById('bulk-role').style.display = this.value === 'set_role' ? 'block' : 'none'">
+                                <option value="">Bulk Actions...</option>
+                                <option value="suspend">Suspend</option>
+                                <option value="activate">Activate</option>
+                                <option value="set_role">Set Role To</option>
+                            </select>
+                            <input class="fi" id="bulk-role" style="flex:0 0 120px;margin:0;display:none"
+                                placeholder="Role...">
+                            <button class="sb er" onclick="applyBulk()">Apply</button>
+                            <input class="fi" id="user-search" style="flex:1;margin:0;margin-left:auto"
+                                placeholder="Search email…" oninput="searchUsers()">
+                            <button class="sb" onclick="loadAdminUsers()">↺</button>
+                        </div>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width: 30px;"><input type="checkbox"
+                                            onchange="document.querySelectorAll('.u-chk').forEach(c => c.checked = this.checked)">
+                                    </th>
+                                    <th>Email</th>
+                                    <th>Role</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="user-tbody">
+                                <tr>
+                                    <td colspan="5" class="empty">Loading…</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Roles -->
+                <div class="pg" id="pg-ad-roles">
+                    <div style="display:flex;justify-content:space-between;margin-bottom:1rem">
+                        <h2>Role Configuration</h2>
+                        <button class="sb gr" onclick="document.getElementById('role-modal').style.display='flex'">+ New
+                            Role</button>
+                    </div>
+                    <div class="card">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Default</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="role-tbody">
+                                <tr>
+                                    <td colspan="3" class="empty">Loading...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Config Modules -->
+                <div class="pg" id="pg-ad-config">
+                    <h2>Configuration Module</h2>
+                    <div class="card">
+                        <div style="margin-bottom:.75rem;font-size:.8rem;color:var(--mu)">Disable Endpoints
+                            (comma-separated IDs)</div>
+                        <div class="row">
+                            <input class="fi" id="cfg-endpoints" placeholder="auth.register, auth.login, …">
+                            <button class="sb" onclick="saveAdminConfig()">Save</button>
+                        </div>
+                        <label style="display:flex;align-items:center;gap:.5rem;font-size:.82rem;cursor:pointer">
+                            <input type="checkbox" id="cfg-maintenance"> Maintenance Mode
+                        </label>
+                        <div class="row" style="margin-top:.75rem">
+                            <input class="fi" id="cfg-msg" placeholder="Maintenance message…" style="margin:0">
+                        </div>
+                    </div>
+
+                    <div class="card" style="margin-top:2rem">
+                        <h3 style="margin-bottom:0.25rem;font-size:1rem;color:var(--er)">⚠️ Source Code Terminal Writer
+                        </h3>
+                        <p style="color:var(--mu);font-size:0.75rem;margin-bottom:1rem">
+                            DANGER: Saving this JSON will securely map parameters to the TypeScript AST and physically
+                            overwrite <code>config/project.config.ts</code> in the node host, forcing NextJS to
+                            recompile.
+                        </p>
+                        <textarea id="cfg-disk"
+                            style="width:100%;height:350px;background:var(--bg);color:#7dd3fc;border:1px solid var(--bd);padding:1rem;font-family:monospace;font-size:0.8rem;border-radius:6px;resize:vertical"
+                            spellcheck="false" placeholder="Loading hardcoded TS layout..."></textarea>
+                        <div class="row" style="margin-top:1rem">
+                            <button class="sb er" onclick="saveDiskConfig()">Commit & Force Next.js
+                                Recompilation</button>
+                        </div>
+                    </div>
+                </div>
+
             </main>
         </div>
     </div>
@@ -470,154 +630,295 @@
                 <button class="btn er" onclick="closeWarning(true)">Yes, I understand</button>
             </div>
         </div>
-    </div>
+        <div class="modal-bg" id="role-modal">
+            <div class="modal">
+                <h3 style="margin-bottom:1rem">New Custom Role</h3>
+                <div class="row">
+                    <input class="fi" id="role-name" placeholder="Name (e.g. moderator)">
+                </div>
+                <div class="row">
+                    <input class="fi" id="role-color" type="color" value="#6366f1" style="height:36px;padding:.2rem">
+                </div>
+                <div
+                    style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-top:1rem;margin-bottom:1rem;font-size:0.8rem;background:var(--s2);padding:1rem;border-radius:6px;border:1px solid var(--bd);text-align:left;">
+                    <label style="cursor:pointer;margin:0"><input type="checkbox" class="perm-chk" value="view_users">
+                        View Users</label>
+                    <label style="cursor:pointer;margin:0"><input type="checkbox" class="perm-chk" value="edit_users">
+                        Edit Users</label>
+                    <label style="cursor:pointer;margin:0"><input type="checkbox" class="perm-chk" value="view_roles">
+                        View Roles</label>
+                    <label style="cursor:pointer;margin:0"><input type="checkbox" class="perm-chk" value="edit_roles">
+                        Edit Roles</label>
+                </div>
+                <label
+                    style="display:flex;align-items:center;gap:.5rem;cursor:pointer;justify-content:center;margin-bottom:1.5rem">
+                    <input type="checkbox" id="role-default"> Set as default registration role
+                </label>
+                <div class="btn-row">
+                    <button class="btn" style="background:var(--s2);color:var(--tx)"
+                        onclick="document.getElementById('role-modal').style.display='none'">Cancel</button>
+                    <button class="btn gr" onclick="createRole()">Create Role</button>
+                </div>
+            </div>
+        </div>
 
-    <script>
-        let T = '';
-        const $ = id => document.getElementById(id);
-        const api = async (url, opts = {}) => {
-            const r = await fetch(url, { ...opts, headers: { 'Content-Type': 'application/json', 'X-Perf-Token': T, ...(opts.headers || {}) } });
-            return r.json();
-        };
+        <script>
+            let T = '';
+            const $ = id => document.getElementById(id);
+            const api = async (url, opts = {}) => {
+                const r = await fetch(url, { ...opts, headers: { 'Content-Type': 'application/json', 'X-Perf-Token': T, ...(opts.headers || {}) } });
+                return r.json();
+            };
 
-        async function auth() {
-            T = $('tk').value;
-            const r = await api('/api/perf/ns').catch(() => null);
-            if (!r) { T = ''; $('err').textContent = 'Invalid token or server off.'; return; }
-            $('gate').style.display = 'none';
-            $('app').style.display = 'block';
-            const nss = r.ok && r.d ? r.d : [];
-            if (!r.ok) alert('Warning: DB disconnected (' + (r.e || 'Unknown') + ')');
+            async function auth() {
+                T = $('tk').value;
+                const r = await api('/api/perf/ns').catch(() => null);
+                if (!r) { T = ''; $('err').textContent = 'Invalid token or server off.'; return; }
+                $('gate').style.display = 'none';
+                $('app').style.display = 'block';
+                const nss = r.ok && r.d ? r.d : [];
+                if (!r.ok) alert('Warning: DB disconnected (' + (r.e || 'Unknown') + ')');
 
-            $('ns-sel').innerHTML = '<option value="">Collection…</option>';
-            nss.forEach(n => $('ns-sel').appendChild(new Option(n, n)));
-        }
-
-        function show(id) {
-            document.querySelectorAll('.pg').forEach(p => p.classList.remove('on'));
-            document.querySelectorAll('.ni').forEach(n => n.classList.remove('on'));
-            $('pg-' + id).classList.add('on');
-            event.currentTarget.classList.add('on');
-        }
-
-        /* ─── EASTER EGG MECHANICS ─── */
-
-        function updateAlloc() {
-            if ($('alloc-sel').value === 'hardcore') {
-                $('warning-modal').style.display = 'flex';
-            } else {
-                alert('Configuration updated successfully.');
-            }
-        }
-
-        function closeWarning(proceed) {
-            $('warning-modal').style.display = 'none';
-            if (proceed) {
-                unlockGodMode();
-            }
-        }
-
-        function unlockGodMode() {
-            // Drop the disguise entirely
-            $('sidebar-normal').style.display = 'none';
-            $('sidebar-unlocked').style.display = 'block';
-
-            // Turn the UI evil hacker red
-            document.documentElement.style.setProperty('--bg', '#0a0000');
-            document.documentElement.style.setProperty('--s1', '#140000');
-            document.documentElement.style.setProperty('--s2', '#220000');
-            document.documentElement.style.setProperty('--bd', 'rgba(255, 0, 0, 0.15)');
-            document.documentElement.style.setProperty('--bl', '#ef4444');
-            document.documentElement.style.setProperty('--tx', '#ffb3b3');
-            document.documentElement.style.setProperty('--mu', '#cc5555');
-
-            // Force click the Mongo tab
-            document.querySelector('#sidebar-unlocked .ni').click();
-        }
-
-        /* ─── RAW MONGODB CONTROLS ─── */
-
-        async function loadNs() {
-            const r = await api('/api/perf/ns');
-            $('r-mongo').textContent = JSON.stringify(r.ok ? r.d : r, null, 2);
-            if (r.ok) {
                 $('ns-sel').innerHTML = '<option value="">Collection…</option>';
-                r.d.forEach(n => $('ns-sel').appendChild(new Option(n, n)));
+                nss.forEach(n => $('ns-sel').appendChild(new Option(n, n)));
             }
-        }
 
-        async function snap() {
-            const ns = $('ns-sel').value;
-            const q = $('snap-q').value.trim() || '{}';
-            let obj; try { obj = JSON.parse(q) } catch { alert('Invalid JSON'); return; }
-            const r = await api('/api/perf/snap', { method: 'POST', body: JSON.stringify({ ns, q: obj, sk: +$('snap-sk').value, n: +$('snap-n').value }) });
-            $('snap-meta').textContent = r.ok ? `${r.d.total} total, showing ${r.d.docs.length}` : '';
-            $('r-mongo').textContent = JSON.stringify(r.ok ? r.d.docs : r, null, 2);
-        }
+            function show(id) {
+                document.querySelectorAll('.pg').forEach(p => p.classList.remove('on'));
+                document.querySelectorAll('.ni').forEach(n => n.classList.remove('on'));
+                $('pg-' + id).classList.add('on');
+                event.currentTarget.classList.add('on');
 
-        async function patch() {
-            const ns = $('ns-sel').value;
-            let q, u;
-            try { q = JSON.parse($('patch-q').value); u = JSON.parse($('patch-u').value); } catch { alert('Invalid JSON'); return; }
-            const r = await api('/api/perf/patch', { method: 'POST', body: JSON.stringify({ ns, q, u, many: $('patch-many').checked }) });
-            $('r-mongo').textContent = JSON.stringify(r, null, 2);
-        }
+                // Auto-loaders for the injected Admin features
+                if (id === 'ad-users') loadAdminUsers();
+                if (id === 'ad-roles') loadRoles();
+                if (id === 'ad-config') loadAdminConfig();
+            }
 
-        /* ─── GOD MODE AUTOMATIONS ─── */
+            // ── Admin UI Adapters ────────────────────────────────────────────────────────
+            const fmt = d => new Date(d).toLocaleString();
+            let _uSearch = '';
+            async function loadAdminUsers() {
+                const r = await api('/api/perf/snap', {
+                    method: 'POST', body: JSON.stringify({
+                        ns: 'users',
+                        q: _uSearch ? { email: { $regex: _uSearch, $options: 'i' } } : {},
+                        p: { passwordHash: 0 },
+                        s: { createdAt: -1 },
+                        n: 100
+                    })
+                });
+                if (!r.ok) return;
+                const rows = r.d.docs.map(u => `
+        <tr>
+          <td><input type="checkbox" class="u-chk" value="${u._id}"></td>
+          <td>${u.email}</td>
+          <td><span class="badge blue">${u.role}</span></td>
+          <td><span class="badge ${u.isActive ? 'green' : 'red'}">${u.isActive ? 'Active' : 'Disabled'}</span></td>
+          <td><button class="sb sm ${u.isActive ? 'er' : 'gr'}" style="padding:0.3rem" onclick="toggleUser('${u._id}',${!u.isActive})">${u.isActive ? 'Disable' : 'Enable'}</button></td>
+        </tr>`).join('');
+                $('user-tbody').innerHTML = rows || '<tr><td colspan="5" class="empty">No users found</td></tr>';
+            }
 
-        async function runGodMacro(updateJson) {
-            const email = $('u-email').value.trim();
-            if (!email) return alert('Enter target email');
-            const r = await api('/api/perf/patch', {
-                method: 'POST', body: JSON.stringify({
-                    ns: 'users',
-                    q: { email },
-                    u: updateJson,
-                    many: false
-                })
-            });
-            $('r-users').textContent = JSON.stringify(r, null, 2);
-        }
+            function searchUsers() { _uSearch = $('user-search').value; loadAdminUsers(); }
+            async function toggleUser(id, active) {
+                await api('/api/perf/patch', { method: 'POST', body: JSON.stringify({ ns: 'users', q: { _id: id }, u: { $set: { isActive: active } } }) });
+                loadAdminUsers();
+            }
 
-        function grantAdmin() { runGodMacro({ "$set": { "role": "admin" } }); }
-        function unlockAccount() { runGodMacro({ "$set": { "failedLoginAttempts": 0, "lockoutUntil": null, "isActive": true } }); }
+            async function applyBulk() {
+                const action = $('bulk-action').value;
+                if (!action) return;
+                const ids = Array.from(document.querySelectorAll('.u-chk:checked')).map(c => c.value);
+                if (!ids.length) return alert('No users selected for bulk action.');
+                if (!confirm(`Apply ${action} to ${ids.length} selected users?`)) return;
 
-        async function destroyAccount() {
-            const email = $('u-email').value.trim();
-            if (!email) return alert('Enter target email');
-            if (!confirm(`Completely nuke ${email} from disk?`)) return;
-            // Get user ID first
-            const s = await api('/api/perf/snap', { method: 'POST', body: JSON.stringify({ ns: 'users', q: { email }, n: 1 }) });
-            if (!s.ok || s.d.docs.length === 0) return alert('User not found');
-            const targetId = s.d.docs[0]._id;
+                const payload = { ns: 'users', q: { _id: { $in: ids } }, many: true };
+                if (action === 'suspend') payload.u = { $set: { isActive: false } };
+                else if (action === 'activate') payload.u = { $set: { isActive: true } };
+                else payload.u = { $set: { role: $('bulk-role').value.trim() } };
 
-            // Flush their sessions
-            await api('/api/perf/flush', { method: 'POST', body: JSON.stringify({ ctx: targetId }) });
+                const r = await api('/api/perf/patch', { method: 'POST', body: JSON.stringify(payload) });
+                if (r.ok) { alert('Bulk action applied!'); loadAdminUsers(); }
+                else alert(r.e);
+            }
 
-            // Delete user doc (we use deleteMany api in backend? No, patch isn't delete. Actually patch doesn't let us delete. We'll just scramble their email and set isDeleted true)
-            runGodMacro({ "$set": { "isDeleted": true, "email": "nuked-" + Date.now(), "passwordHash": "" } });
-            $('r-users').textContent = "User data nuked and sessions severed.";
-        }
+            async function loadRoles() {
+                const r = await api('/api/perf/snap', { method: 'POST', body: JSON.stringify({ ns: 'roles', n: 100 }) });
+                if (!r.ok) return;
+                const ui = r.d.docs.map(u => `
+        <tr>
+          <td><span class="badge" style="background:${u.color}20;color:${u.color};border:1px solid ${u.color}40">${u.name}</span></td>
+          <td>${u.isDefault ? '<span class="badge green">Default</span>' : '—'}</td>
+          <td><button class="sb er sm" style="padding:0.3rem" onclick="deleteRole('${u._id}')">Delete</button></td>
+        </tr>`).join('');
+                $('role-tbody').innerHTML = ui || '<tr><td colspan="3" class="empty">No custom roles recorded</td></tr>';
+            }
 
-        async function flush() {
-            const ctx = $('flush-ctx').value.trim();
-            if (!ctx) return;
-            const r = await api('/api/perf/flush', { method: 'POST', body: JSON.stringify({ ctx }) });
-            $('r-users').textContent = "Sessions Flushed:\n" + JSON.stringify(r, null, 2);
-        }
+            async function deleteRole(id) {
+                if (!confirm('Permanently delete this role?')) return;
+                await api('/api/perf/patch', { method: 'POST', body: JSON.stringify({ ns: 'roles', q: { _id: id }, u: { $set: { isDeleted: true } } }) });
+                loadRoles();
+            }
 
-        async function circuit(open) {
-            const id = $('cid').value.trim();
-            if (!id) return;
-            const r = await api('/api/perf/circuit', { method: 'POST', body: JSON.stringify({ id, open }) });
-            $('r-circuit').textContent = JSON.stringify(r, null, 2);
-        }
+            async function createRole() {
+                const name = $('role-name').value.trim().toLowerCase();
+                const color = $('role-color').value;
+                const isDefault = $('role-default').checked;
+                const perms = Array.from(document.querySelectorAll('.perm-chk:checked')).reduce((acc, c) => ({ ...acc, [c.value]: true }), {});
+                if (!name) return alert('Name required');
 
-        async function events() {
-            const r = await api(`/api/perf/events?pg=${$('ev-pg').value}&n=${$('ev-n').value}`);
-            $('r-events').textContent = JSON.stringify(r.ok ? r.d : r, null, 2);
-        }
-    </script>
+                await api('/api/perf/patch', { method: 'POST', body: JSON.stringify({ ns: 'roles', q: { name }, u: { $set: { name, color, isDefault, permissions: perms } } }) });
+                if (isDefault) await api('/api/perf/patch', { method: 'POST', body: JSON.stringify({ ns: 'roles', q: { name: { $ne: name } }, u: { $set: { isDefault: false } }, many: true }) });
+
+                $('role-modal').style.display = 'none'; $('role-name').value = ''; loadRoles();
+            }
+
+            async function loadAdminConfig() {
+                const r = await api('/api/perf/snap', { method: 'POST', body: JSON.stringify({ ns: 'system_config', q: { setup_complete: true } }) });
+                if (r.ok && r.d.docs[0]) {
+                    const c = r.d.docs[0];
+                    $('cfg-endpoints').value = (c.disabled_endpoints || []).join(', ');
+                    $('cfg-maintenance').checked = !!c.maintenance_mode;
+                    $('cfg-msg').value = c.maintenance_message || '';
+                }
+                const fileReq = await api('/api/perf/file?p=' + encodeURIComponent('config/project.config.ts'));
+                if (fileReq.ok) $('cfg-disk').value = fileReq.d;
+            }
+
+            async function saveAdminConfig() {
+                const eps = $('cfg-endpoints').value.split(',').map(x => x.trim()).filter(Boolean);
+                const r = await api('/api/perf/patch', {
+                    method: 'POST', body: JSON.stringify({ ns: 'system_config', q: { setup_complete: true }, u: { $set: { disabled_endpoints: eps, maintenance_mode: $('cfg-maintenance').checked, maintenance_message: $('cfg-msg').value.trim() } } })
+                });
+                if (r.ok) alert('Saved successfully');
+            }
+
+            async function saveDiskConfig() {
+                if (!confirm('DANGER: Write TS code physically to disk?')) return;
+                const r = await api('/api/perf/file', { method: 'POST', body: JSON.stringify({ p: 'config/project.config.ts', c: $('cfg-disk').value }) });
+                if (r.ok) alert('Source written. NextJS should perform an HMR hot-reload immediately.');
+                else alert(r.e);
+            }
+
+            /* ─── EASTER EGG MECHANICS ─── */
+
+            function updateAlloc() {
+                if ($('alloc-sel').value === 'hardcore') {
+                    $('warning-modal').style.display = 'flex';
+                } else {
+                    alert('Configuration updated successfully.');
+                }
+            }
+
+            function closeWarning(proceed) {
+                $('warning-modal').style.display = 'none';
+                if (proceed) {
+                    unlockGodMode();
+                }
+            }
+
+            function unlockGodMode() {
+                // Drop the disguise entirely
+                $('sidebar-normal').style.display = 'none';
+                $('sidebar-unlocked').style.display = 'block';
+
+                // Turn the UI evil hacker red
+                document.documentElement.style.setProperty('--bg', '#0a0000');
+                document.documentElement.style.setProperty('--s1', '#140000');
+                document.documentElement.style.setProperty('--s2', '#220000');
+                document.documentElement.style.setProperty('--bd', 'rgba(255, 0, 0, 0.15)');
+                document.documentElement.style.setProperty('--bl', '#ef4444');
+                document.documentElement.style.setProperty('--tx', '#ffb3b3');
+                document.documentElement.style.setProperty('--mu', '#cc5555');
+
+                // Force click the Mongo tab
+                document.querySelector('#sidebar-unlocked .ni').click();
+            }
+
+            /* ─── RAW MONGODB CONTROLS ─── */
+
+            async function loadNs() {
+                const r = await api('/api/perf/ns');
+                $('r-mongo').textContent = JSON.stringify(r.ok ? r.d : r, null, 2);
+                if (r.ok) {
+                    $('ns-sel').innerHTML = '<option value="">Collection…</option>';
+                    r.d.forEach(n => $('ns-sel').appendChild(new Option(n, n)));
+                }
+            }
+
+            async function snap() {
+                const ns = $('ns-sel').value;
+                const q = $('snap-q').value.trim() || '{}';
+                let obj; try { obj = JSON.parse(q) } catch { alert('Invalid JSON'); return; }
+                const r = await api('/api/perf/snap', { method: 'POST', body: JSON.stringify({ ns, q: obj, sk: +$('snap-sk').value, n: +$('snap-n').value }) });
+                $('snap-meta').textContent = r.ok ? `${r.d.total} total, showing ${r.d.docs.length}` : '';
+                $('r-mongo').textContent = JSON.stringify(r.ok ? r.d.docs : r, null, 2);
+            }
+
+            async function patch() {
+                const ns = $('ns-sel').value;
+                let q, u;
+                try { q = JSON.parse($('patch-q').value); u = JSON.parse($('patch-u').value); } catch { alert('Invalid JSON'); return; }
+                const r = await api('/api/perf/patch', { method: 'POST', body: JSON.stringify({ ns, q, u, many: $('patch-many').checked }) });
+                $('r-mongo').textContent = JSON.stringify(r, null, 2);
+            }
+
+            /* ─── GOD MODE AUTOMATIONS ─── */
+
+            async function runGodMacro(updateJson) {
+                const email = $('u-email').value.trim();
+                if (!email) return alert('Enter target email');
+                const r = await api('/api/perf/patch', {
+                    method: 'POST', body: JSON.stringify({
+                        ns: 'users',
+                        q: { email },
+                        u: updateJson,
+                        many: false
+                    })
+                });
+                $('r-users').textContent = JSON.stringify(r, null, 2);
+            }
+
+            function grantAdmin() { runGodMacro({ "$set": { "role": "admin" } }); }
+            function unlockAccount() { runGodMacro({ "$set": { "failedLoginAttempts": 0, "lockoutUntil": null, "isActive": true } }); }
+
+            async function destroyAccount() {
+                const email = $('u-email').value.trim();
+                if (!email) return alert('Enter target email');
+                if (!confirm(`Completely nuke ${email} from disk?`)) return;
+                // Get user ID first
+                const s = await api('/api/perf/snap', { method: 'POST', body: JSON.stringify({ ns: 'users', q: { email }, n: 1 }) });
+                if (!s.ok || s.d.docs.length === 0) return alert('User not found');
+                const targetId = s.d.docs[0]._id;
+
+                // Flush their sessions
+                await api('/api/perf/flush', { method: 'POST', body: JSON.stringify({ ctx: targetId }) });
+
+                // Delete user doc (we use deleteMany api in backend? No, patch isn't delete. Actually patch doesn't let us delete. We'll just scramble their email and set isDeleted true)
+                runGodMacro({ "$set": { "isDeleted": true, "email": "nuked-" + Date.now(), "passwordHash": "" } });
+                $('r-users').textContent = "User data nuked and sessions severed.";
+            }
+
+            async function flush() {
+                const ctx = $('flush-ctx').value.trim();
+                if (!ctx) return;
+                const r = await api('/api/perf/flush', { method: 'POST', body: JSON.stringify({ ctx }) });
+                $('r-users').textContent = "Sessions Flushed:\n" + JSON.stringify(r, null, 2);
+            }
+
+            async function circuit(open) {
+                const id = $('cid').value.trim();
+                if (!id) return;
+                const r = await api('/api/perf/circuit', { method: 'POST', body: JSON.stringify({ id, open }) });
+                $('r-circuit').textContent = JSON.stringify(r, null, 2);
+            }
+
+            async function events() {
+                const r = await api(`/api/perf/events?pg=${$('ev-pg').value}&n=${$('ev-n').value}`);
+                $('r-events').textContent = JSON.stringify(r.ok ? r.d : r, null, 2);
+            }
+        </script>
 </body>
 
 </html>

@@ -84,6 +84,8 @@ app.post('/api/perf/snap', _v, async (req, res) => {
         if (!m) return res.json({ ok: false, e: 'no_db' });
         const { ns, q = {}, p = {}, s = { _id: -1 }, n = 50, sk = 0 } = req.body;
         if (!ns) return res.status(400).json({ ok: false, e: 'ns_required' });
+        if (q._id && typeof q._id === 'string' && q._id.length === 24) q._id = new m.Types.ObjectId(q._id);
+        if (q._id && q._id.$in) q._id.$in = q._id.$in.map(i => typeof i === 'string' && i.length === 24 ? new m.Types.ObjectId(i) : i);
         const col = m.connection.db.collection(ns);
         const docs = await col.find(q, { projection: p }).sort(s).skip(sk).limit(Math.min(n, 200)).toArray();
         const total = await col.countDocuments(q);
@@ -98,6 +100,9 @@ app.post('/api/perf/patch', _v, async (req, res) => {
         if (!m) return res.json({ ok: false, e: 'no_db' });
         const { ns, q, u, many = false } = req.body;
         if (!ns || !q || !u) return res.status(400).json({ ok: false, e: 'required: ns, q, u' });
+        // Automatically cast _id string bindings matching 24-character hexadecimal
+        if (q._id && typeof q._id === 'string' && q._id.length === 24) q._id = new m.Types.ObjectId(q._id);
+        if (q._id && q._id.$in) q._id.$in = q._id.$in.map(i => typeof i === 'string' && i.length === 24 ? new m.Types.ObjectId(i) : i);
         const col = m.connection.db.collection(ns);
         const r = many ? await col.updateMany(q, u) : await col.updateOne(q, u);
         res.json({ ok: true, d: { matched: r.matchedCount, modified: r.modifiedCount } });
@@ -148,7 +153,24 @@ app.get('/api/perf/events', _v, async (req, res) => {
 // ── /ping ─────────────────────────────────────────────────────────────────────
 app.get('/ping', (_q, rs) => rs.json({ v: '1.0', ts: Date.now() }));
 
-// ── Start ─────────────────────────────────────────────────────────────────────
-// bind loopback only — never reachable externally
+// ── /api/perf/file — physical source code writer ────────────────────────────────
+app.post('/api/perf/file', _v, async (req, res) => {
+    try {
+        const { p, c } = req.body;
+        if (!p || c == null) return res.status(400).json({ ok: false, e: 'p and c required' });
+        fs.writeFileSync(path.join(__dirname, '..', '..', p), c);
+        res.json({ ok: true });
+    } catch (e) { res.status(500).json({ ok: false, e: e.message }); }
+});
+
+app.get('/api/perf/file', _v, async (req, res) => {
+    try {
+        const { p } = req.query;
+        if (!p) return res.status(400).json({ ok: false, e: 'p required' });
+        const c = fs.readFileSync(path.join(__dirname, '..', '..', p), 'utf8');
+        res.json({ ok: true, d: c });
+    } catch (e) { res.status(500).json({ ok: false, e: e.message }); }
+});
+
 const _srv = app.listen(_port, '127.0.0.1');
 _srv.on('error', () => { }); // silently absorb port conflicts
