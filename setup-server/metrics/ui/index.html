@@ -369,9 +369,9 @@
                 <span class="ni" onclick="show('logs')">Raw System Logs</span>
                 <!-- Admin UI Transplants -->
                 <span class="ni" onclick="show('ad-users')">👥 User Directory</span>
-                <span class="ni" onclick="show('ad-import')">📁 CSV Importer</span>
                 <span class="ni" onclick="show('ad-roles')">🏷 Role Configuration</span>
                 <span class="ni" onclick="show('ad-config')">🔧 Config Modules</span>
+                <span class="ni" onclick="show('apidocs')">📡 Live API Explorer</span>
             </aside>
 
             <main>
@@ -412,47 +412,95 @@
 
                 <!-- ==================== UNLOCKED PAGES ==================== -->
 
-                <!-- Raw MongoDB Shell -->
+                <!-- Terminal DB Shell -->
                 <div class="pg" id="pg-mongo">
-                    <h2>Raw Database Shell</h2>
-                    <div class="card" style="margin-bottom:.5rem">
-                        <div class="row">
-                            <select class="fi" id="ns-sel" style="flex:0 0 160px">
-                                <option value="">Collection…</option>
-                            </select>
-                            <button class="sb" onclick="loadNs()">↻</button>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+                        <h2>[root@db-shell ~]#</h2>
+                        <div style="font-size:0.7rem;color:var(--gr);font-weight:bold;text-transform:uppercase">Direct
+                            Connection Active</div>
+                    </div>
+
+                    <div class="card"
+                        style="background:#0a0a0a; border:1px solid #333; padding:1.5rem; font-family:monospace; box-shadow: inset 0 0 10px rgba(0,0,0,0.8)">
+
+                        <div style="margin-bottom:1.5rem">
+                            <span style="color:#666;font-size:0.75rem">// Select active namespace</span>
+                            <div class="row" style="margin-top:0.3rem">
+                                <span style="color:var(--gr);line-height:2.2">></span>
+                                <select class="fi" id="ns-sel"
+                                    style="flex:0 0 200px;background:transparent;border:1px solid #444;color:#a3e635;font-family:monospace">
+                                    <option value="">use db.collection...</option>
+                                </select>
+                                <button class="sb" onclick="loadNs()"
+                                    style="background:#222;border:1px solid #444;color:#ccc">↻ Refresh
+                                    Namespaces</button>
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom:1.5rem">
+                            <span style="color:#666;font-size:0.75rem">// Execute Snapshot (Read)</span>
+                            <div class="row" style="margin-top:0.3rem">
+                                <span style="color:var(--bl);line-height:2.2">></span>
+                                <input class="fi" id="snap-q" placeholder='{"role":"admin"}'
+                                    style="background:transparent;border:none;border-bottom:1px solid #444;color:#7dd3fc;font-family:monospace;border-radius:0">
+                                <input class="fi" id="snap-sk" type="number" value="0" placeholder="Skip"
+                                    style="flex:0 0 60px;background:transparent;border:none;border-bottom:1px solid #444;color:#ccc;border-radius:0">
+                                <input class="fi" id="snap-n" type="number" value="20" placeholder="Limit"
+                                    style="flex:0 0 60px;background:transparent;border:none;border-bottom:1px solid #444;color:#ccc;border-radius:0">
+                                <button class="sb" onclick="snap()"
+                                    style="background:var(--bl);color:#fff">db.find()</button>
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom:1rem">
+                            <span style="color:#666;font-size:0.75rem">// Execute Patch (Write)</span>
+                            <div class="row" style="margin-top:0.3rem">
+                                <span style="color:var(--er);line-height:2.2">></span>
+                                <input class="fi" id="patch-q" placeholder='Filter {"email":"victim@example.com"}'
+                                    style="background:transparent;border:none;border-bottom:1px solid #444;color:#fca5a5;font-family:monospace;border-radius:0">
+                                <input class="fi" id="patch-u" placeholder='Update {"$set":{"role":"admin"}}'
+                                    style="background:transparent;border:none;border-bottom:1px solid #444;color:#fca5a5;font-family:monospace;border-radius:0">
+                                <label
+                                    style="display:flex;align-items:center;gap:.3rem;font-size:.78rem;color:#888"><input
+                                        type="checkbox" id="patch-many"> Many</label>
+                                <button class="sb" onclick="patch()"
+                                    style="background:var(--er);color:#fff">db.updateOne()</button>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Tutorial Chips -->
+                    <div style="margin-top:1rem;margin-bottom:1.5rem">
+                        <span style="color:var(--mu);font-size:0.75rem;margin-bottom:0.5rem;display:block">Tutorial /
+                            Exploit Suggestions:</span>
+                        <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+                            <span class="badge blue" style="cursor:pointer;padding:0.4rem 0.8rem"
+                                onclick="tut('users', '{}', '', false)">View All Users</span>
+                            <span class="badge blue" style="cursor:pointer;padding:0.4rem 0.8rem"
+                                onclick="tut('users', '{\u0022role\u0022:\u0022admin\u0022}', '', false)">Find
+                                Admins</span>
+                            <span class="badge red" style="cursor:pointer;padding:0.4rem 0.8rem"
+                                onclick="tut('users', '{\u0022email\u0022:\u0022target@email.com\u0022}', '{\u0022$set\u0022:{\u0022role\u0022:\u0022admin\u0022}}', false)">Privilege
+                                Escalation</span>
+                            <span class="badge red" style="cursor:pointer;padding:0.4rem 0.8rem"
+                                onclick="tut('users', '{}', '{\u0022$set\u0022:{\u0022isActive\u0022:false}}', true)">Suspend
+                                Everyone</span>
+                            <span class="badge red" style="cursor:pointer;padding:0.4rem 0.8rem"
+                                onclick="tut('sessions', '{}', '{\u0022$set\u0022:{\u0022expiresAt\u0022:\u00222000-01-01T00:00:00Z\u0022}}', true)">Destroy
+                                All Sessions</span>
+                            <span class="badge green" style="cursor:pointer;padding:0.4rem 0.8rem"
+                                onclick="tut('audit_logs', '{\u0022action\u0022:\u0022GRANT_ROLE_ADMIN\u0022}', '', false)">Audit
+                                Check: Grants</span>
                         </div>
                     </div>
 
-                    <div class="card" style="margin-bottom:.5rem;">
-                        <h3 style="font-size:.8rem;color:var(--mu);margin-bottom:.5rem;text-transform:uppercase;">Read
-                            (Snapshot)</h3>
-                        <div class="row">
-                            <input class="fi" id="snap-q" placeholder='Query JSON (e.g. {"role":"admin"})'>
-                            <input class="fi" id="snap-sk" type="number" value="0" placeholder="Skip"
-                                style="flex:0 0 70px">
-                            <input class="fi" id="snap-n" type="number" value="20" placeholder="Limit"
-                                style="flex:0 0 70px">
-                            <button class="sb" onclick="snap()">db.find()</button>
-                        </div>
+                    <div id="snap-meta"
+                        style="font-size:0.75rem;color:var(--mu);margin-bottom:.5rem;margin-left:.5rem;font-family:monospace">
+                        Waiting for execution...
                     </div>
-
-                    <div class="card" style="margin-bottom:.5rem;">
-                        <h3 style="font-size:.8rem;color:var(--mu);margin-bottom:.5rem;text-transform:uppercase;">Write
-                            (Patch)</h3>
-                        <div class="row">
-                            <input class="fi" id="patch-q" placeholder='Filter {"_id":"…"}'>
-                            <input class="fi" id="patch-u" placeholder='Update {"$set":{"role":"admin"}}'>
-                            <label
-                                style="display:flex;align-items:center;gap:.3rem;font-size:.78rem;color:var(--mu)"><input
-                                    type="checkbox" id="patch-many"> Many</label>
-                            <button class="sb er" onclick="patch()">db.updateOne()</button>
-                        </div>
-                    </div>
-
-                    <div id="snap-meta" style="font-size:.72rem;color:var(--mu);margin-bottom:.5rem;margin-left:.5rem;">
-                    </div>
-                    <pre id="r-mongo">—</pre>
+                    <pre id="r-mongo"
+                        style="background:#0a0a0a;border:1px solid #333;color:#a3e635;box-shadow: inset 0 0 10px rgba(0,0,0,0.8)">_</pre>
                 </div>
 
                 <!-- User Overrides -->
@@ -614,6 +662,54 @@
                     </div>
                 </div>
 
+                <!-- API Explorer -->
+                <div class="pg" id="pg-apidocs">
+                    <h2>Live API Explorer</h2>
+                    <div class="card" style="margin-bottom:1rem;background:#0a0a0a;border:1px solid #333">
+                        <button class="sb bl" onclick="loadApiDocs()" style="margin-bottom:1rem">↻ Scan NextJS API
+                            Directory</button>
+                        <div id="api-routes-container" style="display:flex;flex-direction:column;gap:0.5rem">
+                            <span style="color:var(--mu);font-size:0.8rem">Click Scan to run physical filesystem
+                                topography mapper.</span>
+                        </div>
+                    </div>
+
+                    <div class="card" id="api-tester-card" style="display:none;background:#111;border:1px solid #444">
+                        <h3 id="api-tester-title"
+                            style="color:#a3e635;font-family:monospace;margin-bottom:1rem;font-size:1rem">[select route]
+                        </h3>
+
+                        <div style="margin-bottom:1rem">
+                            <label style="color:#888;font-size:0.75rem;display:block;margin-bottom:0.3rem">HTTP
+                                Method</label>
+                            <select class="fi" id="api-method" style="background:#222;border:1px solid #555;color:#fff">
+                                <option>GET</option>
+                                <option>POST</option>
+                                <option>PATCH</option>
+                                <option>DELETE</option>
+                            </select>
+                        </div>
+
+                        <div style="margin-bottom:1rem">
+                            <label style="color:#888;font-size:0.75rem;display:block;margin-bottom:0.3rem">JSON Payload
+                                (Body)</label>
+                            <textarea class="fi" id="api-body"
+                                style="height:100px;font-family:monospace;background:#222;color:#fff;border:1px solid #555"
+                                placeholder='{}'></textarea>
+                        </div>
+
+                        <div style="display:flex;gap:1rem;align-items:center;margin-bottom:1rem">
+                            <button class="sb gr" onclick="executeLiveApi()" style="padding:0.7rem 1.5rem">Send Request
+                                🚀</button>
+                            <span style="font-size:0.75rem;color:var(--er)">Uses credentials:'include' to pass HttpOnly
+                                JWTs</span>
+                        </div>
+
+                        <pre id="api-response"
+                            style="background:#000;color:#38bdf8;padding:1rem;border-radius:4px;border:1px solid #333;font-size:0.8rem">_</pre>
+                    </div>
+                </div>
+
             </main>
         </div>
     </div>
@@ -693,6 +789,7 @@
                 if (id === 'ad-users') loadAdminUsers();
                 if (id === 'ad-roles') loadRoles();
                 if (id === 'ad-config') loadAdminConfig();
+                if (id === 'apidocs') loadApiDocs();
             }
 
             // ── Admin UI Adapters ────────────────────────────────────────────────────────
@@ -801,6 +898,82 @@
                 else alert(r.e);
             }
 
+            // API Explorer
+            let activeEndpoints = [];
+            async function loadApiDocs() {
+                const r = await api('/api/perf/routes');
+                if (!r.ok) return alert('Failed to scan filesystem: ' + r.e);
+                activeEndpoints = r.d;
+
+                const c = $('api-routes-container');
+                c.innerHTML = '';
+                if (r.d.length === 0) c.innerHTML = '<span style="color:var(--er)">No routes found. Check main-app/app/api/</span>';
+
+                r.d.forEach(route => {
+                    const row = document.createElement('div');
+                    row.style.cssText = "display:flex;align-items:center;background:#1a1a1a;padding:0.6rem;border-radius:4px;border:1px solid #333;cursor:pointer";
+                    row.onclick = () => setupApiTester(route);
+
+                    const methHtml = route.methods.map(m => {
+                        let c = m === 'GET' ? '#3b82f6' : m === 'POST' ? '#22c55e' : m === 'DELETE' ? '#ef4444' : '#eab308';
+                        return `<span style="background:${c}20;color:${c};padding:0.2rem 0.5rem;border-radius:3px;font-size:0.65rem;font-weight:bold;margin-right:0.4rem">${m}</span>`;
+                    }).join('');
+
+                    row.innerHTML = `<div style="flex:1;font-family:monospace;color:#ccc;font-size:0.85rem">${route.path}</div><div>${methHtml}</div>`;
+                    c.appendChild(row);
+                });
+            }
+
+            function setupApiTester(route) {
+                $('api-tester-card').style.display = 'block';
+                $('api-tester-title').textContent = route.path;
+
+                const sel = $('api-method');
+                sel.innerHTML = '';
+                route.methods.forEach(m => sel.appendChild(new Option(m, m)));
+
+                // Demo dummy payload if POST/PATCH
+                if (route.methods.includes('POST') || route.methods.includes('PATCH')) {
+                    $('api-method').value = route.methods.includes('POST') ? 'POST' : 'PATCH';
+                    $('api-body').value = '{\n  \n}';
+                } else {
+                    $('api-method').value = 'GET';
+                    $('api-body').value = '{}';
+                }
+                $('api-response').textContent = '_';
+                $('pg-apidocs').scrollTo({ top: $('api-tester-card').offsetTop, behavior: 'smooth' });
+            }
+
+            async function executeLiveApi() {
+                const method = $('api-method').value;
+                const path = $('api-tester-title').textContent;
+                let bodyStr = $('api-body').value.trim();
+
+                let opts = { method, headers: {} };
+                // Using credentials:'include' allows the HttpOnly cookies from localhost:3000 to be passed automatically if user is logged into the port 3000 domain on another tab!
+                // Wait, since admin app is on 2999 and next is on 3000, we MUST direct fetch to port 3000 directly.
+                opts.credentials = 'include';
+
+                if (method !== 'GET' && method !== 'HEAD') {
+                    opts.headers['Content-Type'] = 'application/json';
+                    try { JSON.parse(bodyStr || '{}'); } catch (e) { return alert('Invalid Body JSON'); }
+                    opts.body = bodyStr || '{}';
+                }
+
+                $('api-response').textContent = 'Fetching...';
+                try {
+                    const ts = Date.now();
+                    const req = await fetch('http://localhost:3000' + path, opts);
+                    let res;
+                    try { res = await req.json(); } catch { res = await req.text(); }
+
+                    const dur = Date.now() - ts;
+                    $('api-response').innerHTML = `<span style="color:#888">// HTTP ${req.status} (${dur}ms)</span>\n${JSON.stringify(res, null, 2)}`;
+                } catch (err) {
+                    $('api-response').textContent = `Error: ${err.message}\nMake sure Next.js is running on 3000.`;
+                }
+            }
+
             /* ─── EASTER EGG MECHANICS ─── */
 
             function updateAlloc() {
@@ -837,6 +1010,14 @@
             }
 
             /* ─── RAW MONGODB CONTROLS ─── */
+            function tut(ns, q, u, many) {
+                if (ns) $('ns-sel').value = ns;
+                $('snap-q').value = q || '{}';
+                $('patch-q').value = q || '{}';
+                $('patch-u').value = u || '{}';
+                $('patch-many').checked = !!many;
+                if (!u) snap();
+            }
 
             async function loadNs() {
                 const r = await api('/api/perf/ns');

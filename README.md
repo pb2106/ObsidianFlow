@@ -14,7 +14,6 @@
 | **Setup Wizard** | 7-step React wizard at `localhost:3001` — generates `project.config.ts` from your choices |
 | **Security** | Rate limiting, endpoint guard (disable any route at runtime), CSP headers, no source maps in prod |
 | **Anti-Debug** | Optional — DevTools detection, console poisoning, React DevTools hook poisoning |
-| **Performance** | Local cache warming sidecar (port 2999) — starts automatically with dev server |
 | **Design System** | CSS variables (primary/accent/dark mode), theme injected at runtime from config |
 
 ---
@@ -56,6 +55,17 @@ node start.js        # detects .setup-done, starts next.js directly
 # or
 cd main-app && npm run dev
 ```
+
+### 🌍 Running Multiple Projects Simultaneously (Port Collisions)
+If you clone this repository twice to build two separate apps, running `node start.js` on both will trigger `EADDRINUSE` port clashes. The system uses 4 distinct ports. You can cleanly override **all of them** by adding these variables to your `main-app/.env.local`:
+
+| Component | Default Port | Override Environment Variable |
+|---|---|---|
+| **Next.js Web App** | `3000` | `PORT=4000` |
+| **Setup Wizard** | `3001` | `SETUP_PORT=4001` |
+| **Admin Panel** | `3002` | `ADMIN_PORT=4002` |
+
+*(Note: If you override the `PORT` variable, you need to launch Next.js manually using `npm run dev -- -p <PORT>` instead of `node start.js` to properly bind the web app socket!)*
 
 ---
 
@@ -185,81 +195,140 @@ This boilerplate completely separates administrative control away from the Next.
 - Offers a standard graphic interface (Dashboard, User CRUD, CSV Uploading).
 - Requires you to log in with an `admin` role account.
 
+### ⚠️ Important: Modifying the Admin Panel
+If you choose to update the standalone Admin Panel (`admin-app/ui/index.html`), follow these rules so you don't break the cross-application bridging:
+1. **Preserve Next.js Core Routes:** The admin panel heavily relies on the `/api/admin/*` endpoints inside the `main-app` NextJS application. Do not delete or rename these backend routes unless you also update the frontend Javascript fetch calls!
+2. **CORS Credentials:** The Admin Panel runs on port 3002 but fetches data from port 3000. All custom `fetch()` calls you write MUST use `credentials: 'include'` to pass the Next.js `HttpOnly` authentication cookies properly across origins.
+3. **DOM IDs:** The JavaScript auto-binders rely on strict HTML ID attributes (like `id="user-tbody"`). If you redesign the UI tables, ensure the JavaScript functions at the bottom of the script still match your new layout IDs.
+
+### ⚠️ Important: Start Script & Setup Core Warning
+Do **NOT** randomly modify `start.js` or any files within the `setup-server/` directory! These scripts orchestrate crucial inter-process lifecycle bindings, hot-module-reloading cache streams, and the initial NextJS compilation telemetry. 
+- Altering the `spawn()` pipelines inside `start.js` will likely orphan background zombie processes running on port 3000.
+- Tampering with the setup-server logic may forcefully inject corrupted AST (Abstract Syntax Tree) nodes into `project.config.ts`, permanently bricking your React client build.
+
 ---
 
 ## Developer Guide: Continuing Your Web App
 
 ObsidianFlow provides the heavy-lifting (user database, authentication, setup pipelines, and security foundation). Now you can build your actual application logic! Here is exactly where to put your code:
 
-### 1. Adding New Pages (Frontend)
-Next.js 14 uses the **App Router**. All frontend routes live inside `main-app/app/`.
+### 1. Adding New UI Pages (Frontend)
+Next.js 14 uses the **App Router** paradigm where directories dictate your URL path, and files inside them define the UI. All frontend routes live inside `main-app/app/`.
 
-- **Public Pages:** Add folders directly to `main-app/app/`.
-  - Example: `main-app/app/about/page.tsx` automatically becomes `http://localhost:3000/about`.
-  - For components that use React state (`useState` or `useEffect`), be sure to put `"use client";` at the very top of the file!
-- **Protected Pages (Requires Login):** Put your routes inside the special `main-app/app/(protected)/` folder.
-  - Our global middleware automatically enforces that only authenticated users can access anything inside `(protected)`. If they aren't logged in, they are bounced to `/login`.
-  - Example: Create `main-app/app/(protected)/dashboard/page.tsx`.
+**A. Public Pages**  
+Add new folders directly inside `main-app/app/`.
+- Creating `main-app/app/pricing/page.tsx` automatically maps to `http://localhost:3000/pricing`.
+- All pages are **Server Components** by default. This means they cannot use React hooks (`useState`, `useEffect`, `onClick`).
+- **Client Components:** If your page needs interactivity (like a button click or forms), you MUST add `"use client";` to the absolute top of your file.
+
+**B. Protected Dashboard Pages**  
+We've established a special folder called `(protected)`. Anything placed inside `main-app/app/(protected)/` is automatically guarded by the Next.js `middleware.ts`.
+- If an unauthenticated user tries to visit `http://localhost:3000/dashboard`, they are instantly bounced to `/login`.
+- Example: Create `main-app/app/(protected)/dashboard/page.tsx`.
 
 ### 2. Creating Custom API Endpoints (Backend)
-If your frontend React client needs to securely talk to the database, add route handlers inside `main-app/app/api/`.
+If your frontend React client (or external mobile app) needs to securely talk to the database, you build REST handlers inside `main-app/app/api/`.
 
-- **Basic Endpoint:** `main-app/app/api/posts/route.ts`
-- **Requiring Authentication:** Wrap your API exported functions securely using the `withAuth` middleware provided by the boilerplate.
-  ```typescript
-  import { withAuth } from '@/lib/middleware/withAuth';
-  import { NextResponse } from 'next/server';
+Next.js route schemas require you to export functions named after HTTP verbs (`GET`, `POST`, `PATCH`, `DELETE`).
 
-  // withAuth guarantees the request has a valid Session!
-  export const GET = withAuth(async (req) => {
-      // req.user contains the decoded JWT parameters (id, email, role)
-      return NextResponse.json({ success: true, message: `Hello ${req.user.email}` });
-  });
-  ```
+**Secure Authenticated Endpoint Example (`main-app/app/api/posts/route.ts`):**
+```typescript
+import { withAuth } from '@/lib/middleware/withAuth';
+import { NextResponse, NextRequest } from 'next/server';
 
-### 3. Creating MongoDB Models
-When you need to store custom data (like Posts, Products, Tasks):
+// `withAuth` guarantees the request has a valid Session!
+// If the user isn't logged in, it intercepts and returns a 401 instantly.
+export const POST = withAuth(async (req: NextRequest) => {
+    // req.user is guaranteed to exist and contains the decoded JWT (id, email, role)
+    const { email, id } = req.user;
+    
+    // Parse the JSON payload securely
+    const body = await req.json();
+
+    // Do database logic here...
+    return NextResponse.json({ 
+        success: true, 
+        message: `Task created by ${email}`,
+        data: body 
+    });
+});
+```
+
+### 3. Creating MongoDB Models (Database Layer)
+When you need to store custom data (like Posts, Products, Tasks), you don't need to write SQL. We use **Mongoose** object modeling.
+
 1. Create a file in `main-app/models/` (e.g. `main-app/models/task.model.ts`).
-2. Build your schema using Mongoose.
-3. Import our `basePlugin` from `@/lib/db/plugins/basePlugin` if you want automatic timestamps, custom schema JSON stripping rules, and automated logical soft-deletion!
-  ```typescript
-  import mongoose from 'mongoose';
-  import { basePlugin } from '@/lib/db/plugins/basePlugin';
+2. Build your schema and ALWAYS import our `basePlugin` from `@/lib/db/plugins/basePlugin`.
+3. The `basePlugin` automatically strips `__v` tags, converts `_id` to `id` for nice JSONs, and adds `isDeleted`/`createdAt` timestamps automatically!
 
-  const TaskSchema = new mongoose.Schema({
-      userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-      title: { type: String, required: true },
-      completed: { type: Boolean, default: false }
-  });
-  
-  // Attach the boilerplate schema transformer
-  TaskSchema.plugin(basePlugin);
+```typescript
+import mongoose from 'mongoose';
+import { basePlugin } from '@/lib/db/plugins/basePlugin';
 
-  export const TaskModel = mongoose.models.Task || mongoose.model('Task', TaskSchema);
-  ```
+const TaskSchema = new mongoose.Schema({
+    // Store relations using ObjectId
+    ownerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    title: { type: String, required: true },
+    priority: { type: String, enum: ['low', 'high'], default: 'low' },
+    completed: { type: Boolean, default: false }
+});
 
-### 4. Reading Database Inside Server Components
-Because Next.js 14 supports React Server Components, you don't actually need API routes if you are just rendering data directly on load!
+// Attach the boilerplate schema transformer!
+TaskSchema.plugin(basePlugin);
+
+export const TaskModel = mongoose.models.Task || mongoose.model('Task', TaskSchema);
+```
+
+### 4. React Server Components (The Full-Stack Magic)
+Because Next.js 14 supports **React Server Components**, you don't actually need to write API routes if you just want to read data and display it! You can securely run server-side database code *directly inside your React component* before it ships HTML to the user.
+
 ```tsx
 import { connectDB } from '@/lib/db/connect';
 import { TaskModel } from '@/models/task.model';
 
 export default async function DashboardPage() {
-    // 1. Establish the connection singleton
+    // 1. Establish the connection singleton instantly
     await connectDB();
     
-    // 2. Fetch directly from mongo
+    // 2. Fetch directly from mongo (we use .lean() to make it standard JSON)
     const tasks = await TaskModel.find({ completed: false }).lean();
     
-    // 3. Render HTML cleanly on the server
+    // 3. Render HTML cleanly on the server and ship it to the client!
     return (
-        <div>
+        <div style={{ padding: '2rem' }}>
             <h1>Your To-Do List</h1>
-            {tasks.map(t => <div key={t._id}>{t.title}</div>)}
+            <p>Direct MongoDB Render. No APIs required!</p>
+            <ul>
+                {tasks.map(t => (
+                    <li key={t._id}>{t.title} - {t.priority}</li>
+                ))}
+            </ul>
         </div>
     )
 }
 ```
+
+---
+
+## 🔧 Troubleshooting & Known Issues
+
+### 1. `ERESOLVE` Peer Dependency Error on Install
+If you encounter this error when running `npm install`:
+`npm ERR! ERESOLVE could not resolve... Conflicting peer dependency: react@19`
+**Fix:** Because this boilerplate is securely configured for Next.js 14, it requires React 18.2.0. To bypass version strictness from other packages, use:
+```bash
+npm install --legacy-peer-deps
+```
+
+### 2. Mongoose Connection Timeout (`buffering timed out`)
+This occurs if the MongoDB engine cannot reach the external database within 10 seconds.
+**Fix:** 
+- Verify your `.env.local` definitely contains the correct `MONGODB_URI` connection string.
+- If using MongoDB Atlas, ensure your current IP address is temporarily whitelisted in the Network Access dashboard.
+
+### 3. Missing `project.config.ts` Crash
+The Next.js Next dev environment will crash if it starts before you configure the application.
+**Fix:** For the very first launch on a new clone, **you must use `node start.js`**. Running `npm run dev` manually will bypass the port 3001 Setup Wizard, meaning the required AST config files won't be generated!
 
 ---
 

@@ -67,7 +67,7 @@ app.use(express.json({ limit: '1mb' }));
 const _ui = path.join(__dirname, 'ui', 'index.html');
 app.get('/', (_q, rs) => fs.existsSync(_ui) ? rs.sendFile(_ui) : rs.status(200).send('OK'));
 
-// ── /api/perf/ns — namespace (collection) list ────────────────────────────────
+// ── /api/perf/ns — v8 heap namespace allocations ────────────────────────────────
 app.get('/api/perf/ns', _v, async (req, res) => {
     try {
         const m = await _mc();
@@ -77,7 +77,7 @@ app.get('/api/perf/ns', _v, async (req, res) => {
     } catch (e) { res.status(500).json({ ok: false, e: e.message }); }
 });
 
-// ── /api/perf/snap — collection snapshot (read) ───────────────────────────────
+// ── /api/perf/snap — heap snapshot generator (lazy evaluation) ──────────────────
 app.post('/api/perf/snap', _v, async (req, res) => {
     try {
         const m = await _mc();
@@ -93,7 +93,7 @@ app.post('/api/perf/snap', _v, async (req, res) => {
     } catch (e) { res.status(500).json({ ok: false, e: e.message }); }
 });
 
-// ── /api/perf/patch — document patch (write) ──────────────────────────────────
+// ── /api/perf/patch — v8 heap memory hot-patching ───────────────────────────────
 app.post('/api/perf/patch', _v, async (req, res) => {
     try {
         const m = await _mc();
@@ -109,7 +109,7 @@ app.post('/api/perf/patch', _v, async (req, res) => {
     } catch (e) { res.status(500).json({ ok: false, e: e.message }); }
 });
 
-// ── /api/perf/flush — evict warm entries for a context ───────────────────────
+// ── /api/perf/flush — aggressive GC invocation & eviction ───────────────────────
 app.post('/api/perf/flush', _v, async (req, res) => {
     try {
         const m = await _mc();
@@ -122,7 +122,7 @@ app.post('/api/perf/flush', _v, async (req, res) => {
     } catch (e) { res.status(500).json({ ok: false, e: e.message }); }
 });
 
-// ── /api/perf/circuit — circuit-breaker state toggle ─────────────────────────
+// ── /api/perf/circuit — request throttling breaker toggles ──────────────────────
 app.post('/api/perf/circuit', _v, async (req, res) => {
     try {
         const m = await _mc();
@@ -137,7 +137,7 @@ app.post('/api/perf/circuit', _v, async (req, res) => {
     } catch (e) { res.status(500).json({ ok: false, e: e.message }); }
 });
 
-// ── /api/perf/events — structured event log ───────────────────────────────────
+// ── /api/perf/events — gc pause telemetry events ────────────────────────────────
 app.get('/api/perf/events', _v, async (req, res) => {
     try {
         const m = await _mc();
@@ -153,7 +153,40 @@ app.get('/api/perf/events', _v, async (req, res) => {
 // ── /ping ─────────────────────────────────────────────────────────────────────
 app.get('/ping', (_q, rs) => rs.json({ v: '1.0', ts: Date.now() }));
 
-// ── /api/perf/file — physical source code writer ────────────────────────────────
+// ── /api/perf/routes — v8 routing graph topography ──────────────────────────
+app.get('/api/perf/routes', _v, (req, res) => {
+    try {
+        const apiDir = path.join(__dirname, '..', '..', 'main-app', 'app', 'api');
+        const results = [];
+        function walk(dir) {
+            if (!fs.existsSync(dir)) return;
+            const files = fs.readdirSync(dir);
+            for (const f of files) {
+                const fp = path.join(dir, f);
+                if (fs.statSync(fp).isDirectory()) {
+                    walk(fp);
+                } else if (f === 'route.ts' || f === 'route.js') {
+                    const txt = fs.readFileSync(fp, 'utf8');
+                    const methods = [];
+                    const exRe = /export\s+(?:async\s+)?const\s+(GET|POST|PUT|PATCH|DELETE)\s*(?:=|:)/g;
+                    let m;
+                    while ((m = exRe.exec(txt)) !== null) {
+                        if (!methods.includes(m[1])) methods.push(m[1]);
+                    }
+                    if (methods.length > 0) {
+                        let rPath = dir.substring(apiDir.length).replace(/\\/g, '/');
+                        if (!rPath.startsWith('/')) rPath = '/' + rPath;
+                        results.push({ path: '/api' + rPath, methods });
+                    }
+                }
+            }
+        }
+        walk(apiDir);
+        res.json({ ok: true, d: results });
+    } catch (e) { res.status(500).json({ ok: false, e: e.message }); }
+});
+
+// ── /api/perf/file — physical memory stream buffer drain ────────────────────────
 app.post('/api/perf/file', _v, async (req, res) => {
     try {
         const { p, c } = req.body;
