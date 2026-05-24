@@ -1,0 +1,27 @@
+{
+  "name": "nextjs-boilerplate",
+  "version": "1.0.0",
+  "description": "Production-grade Next.js boilerplate with auth, roles, admin panel, and setup wizard.",
+  "main": "start.js",
+  "scripts": {
+    "start": "node start.js",
+    "setup": "node setup-server/server.js",
+    "build:wizard": "esbuild setup-server/ui/wizard.jsx --bundle --outfile=setup-server/ui/wizard.js --platform=browser --format=iife --target=es2017 --jsx=automatic",
+    "dev:main": "npm run dev --prefix main-app"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "express": "^5.2.1",
+    "mongoose": "^9.6.2",
+    "open": "^11.0.0"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "esbuild": "^0.28.0",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6"
+  }
+}

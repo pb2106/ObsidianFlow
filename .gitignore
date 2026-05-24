@@ -1,0 +1,35 @@
+# ─── Environment & Secrets ───────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+
+# ─── Setup artifacts (never commit) ─────────────────────────────────────────
+.setup-done
+
+# ─── Generated project config (written by wizard) ────────────────────────────
+main-app/config/project.config.ts
+
+# ─── Dependencies ────────────────────────────────────────────────────────────
+node_modules/
+main-app/node_modules/
+admin-app/node_modules/
+setup-server/node_modules/
+
+# ─── Next.js build output ────────────────────────────────────────────────────
+main-app/.next/
+main-app/out/
+
+# ─── Logs ────────────────────────────────────────────────────────────────────
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+
+# ─── OS / Editor ─────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# ─── TypeScript cache ────────────────────────────────────────────────────────
+*.tsbuildinfo
