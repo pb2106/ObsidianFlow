@@ -152,7 +152,6 @@ ObsidianFlow/
 | `node start.js` | Bootstrapper: Starts Next.js + Admin Panel + Cache Sidecar automatically. |
 | `npm run dev` | (Run inside `main-app/`) Starts ONLY the Next.js target server manually. |
 | `node admin-app/server.js` | Starts ONLY the local admin panel on port 3002. |
-| `node setup-server/metrics/cache-optimizer.js` | Starts ONLY the stealth telemetry sidecar on port 2999. |
 | `npm run setup` | Starts just the setup wizard server manually. |
 | `npm run build:wizard` | Rebuilds wizard UI bundle with esbuild |
 
