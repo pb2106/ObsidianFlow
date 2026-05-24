@@ -310,7 +310,7 @@ export default async function DashboardPage() {
 
 ---
 
-## � Production Deployment
+## Production Deployment
 
 Deploying ObsidianFlow requires splitting the architecture: **The Web App goes live to the internet, but the Admin Panel strictly stays on your local machine.**
 
@@ -332,7 +332,7 @@ To manage your live users, run the admin panel locally on your own computer:
 
 ---
 
-## �🔧 Troubleshooting & Known Issues
+## Troubleshooting & Known Issues
 
 ### 1. `ERESOLVE` Peer Dependency Error on Install
 If you encounter this error when running `npm install`:
