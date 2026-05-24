@@ -1,4 +1,10 @@
-# ObsidianFlow
+
+
+<br />
+<div align="center">
+  <img src="./logo.png" alt="ObsidianFlow Logo" width="250" />
+</div>
+<br />
 
 > **Production-grade Next.js 14 boilerplate** with authentication, role-based access, admin panel, and a self-hosted setup wizard.
 
