@@ -21,10 +21,6 @@ export default function LoginPage() {
     const [loading, setLoading] = useState(false);
     const [showPass, setShowPass] = useState(false);
 
-    // 2FA Flow
-    const [pending2FA, setPending2FA] = useState<{ tempToken: string, user: any } | null>(null);
-    const [otp, setOtp] = useState('');
-    const [qrData, setQrData] = useState<{ qrCodeUrl: string, secret: string, backupCodes: string[] } | null>(null);
 
     const placeholder =
         loginBy === 'email' ? 'you@example.com' :
@@ -36,119 +32,14 @@ export default function LoginPage() {
         setError('');
         setLoading(true);
         try {
-            const data = await login(identifier, password);
-            if (data?.requires2FA) {
-                setPending2FA(data);
-            } else {
-                router.push('/');
-            }
+            await login(identifier, password);
+            router.push('/');
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Login failed');
         } finally {
             setLoading(false);
         }
     }
-
-    useEffect(() => {
-        if (!pending2FA) return;
-        if (pending2FA.user.totpEnabled) return; // Already setup, just ask for code
-
-        // Fetch setup data
-        fetch('/api/auth/setup-totp', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ tempToken: pending2FA.tempToken })
-        })
-            .then(r => r.json())
-            .then(json => {
-                if (json.success) setQrData(json.data);
-                else setError(json.message || 'Failed to initialize TOTP setup');
-            });
-    }, [pending2FA]);
-
-    async function handleVerify(e: FormEvent) {
-        e.preventDefault();
-        if (!pending2FA) return;
-        setError('');
-        setLoading(true);
-        try {
-            const res = await fetch('/api/auth/verify-totp', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ tempToken: pending2FA.tempToken, code: otp }),
-            });
-            const json = await res.json();
-            if (!json.success) throw new Error(json.message || 'Verification failed');
-
-            // Successfully verified! Set session and redirect
-            setSession(json.data.user, json.data.accessToken);
-            router.push('/');
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Verification failed');
-        } finally {
-            setLoading(false);
-        }
-    }
-
-    if (pending2FA) {
-        return (
-            <div className="auth-card" style={{ maxWidth: '420px' }}>
-                <h1 className="auth-title">Two-Factor Authentication</h1>
-                <p className="auth-subtitle">
-                    {pending2FA.user.totpEnabled
-                        ? 'Enter the 6-digit code from your authenticator app.'
-                        : 'Action required: Set up mandatory 2FA.'}
-                </p>
-
-                {error && <div className="auth-alert">{error}</div>}
-
-                {!pending2FA.user.totpEnabled && qrData && (
-                    <div style={{ textAlign: 'center', marginBottom: '1.5rem', background: 'var(--surface-color)', padding: '1rem', borderRadius: '8px' }}>
-                        <p style={{ fontSize: '0.85rem', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>Scan this QR code with Google Authenticator, Authy, or Ente Auth.</p>
-                        <img src={qrData.qrCodeUrl} alt="TOTP QR Code" style={{ display: 'block', margin: '0 auto', borderRadius: '8px', border: '4px solid white' }} />
-                        <div style={{ background: '#1c1f2e', color: '#ffb3b3', padding: '0.8rem', borderRadius: '6px', fontSize: '0.8rem', marginTop: '1rem', textAlign: 'left', wordBreak: 'break-all' }}>
-                            <strong style={{ display: 'block', marginBottom: '0.3rem', color: '#ef4444' }}>CRITICAL BACKUP CODES</strong>
-                            <p style={{ marginBottom: '0.5rem', opacity: 0.8 }}>Save these somewhere safe. They will never be shown again.</p>
-                            {qrData.backupCodes.join(' • ')}
-                        </div>
-                    </div>
-                )}
-
-                <form onSubmit={handleVerify} noValidate>
-                    <div className="auth-field">
-                        <label htmlFor="otp">Authentication Code</label>
-                        <input
-                            id="otp"
-                            type="text"
-                            value={otp}
-                            onChange={e => setOtp(e.target.value)}
-                            placeholder="000000"
-                            required
-                            autoComplete="one-time-code"
-                            autoFocus
-                            style={{ textAlign: 'center', letterSpacing: '0.5rem', fontSize: '1.2rem' }}
-                        />
-                    </div>
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="auth-btn"
-                        style={{ background: `linear-gradient(135deg, ${theme.primaryColor}, ${theme.accentColor})` }}
-                    >
-                        {loading ? <span className="auth-spinner" /> : 'Verify'}
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => { setPending2FA(null); setQrData(null); }}
-                        style={{ marginTop: '1rem', background: 'none', border: 'none', width: '100%', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.85rem' }}
-                    >
-                        Back to Login
-                    </button>
-                </form>
-            </div>
-        );
-    }
-
     return (
         <div className="auth-card">
             <h1 className="auth-title">Welcome back</h1>

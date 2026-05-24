@@ -436,16 +436,6 @@
                             <div class="l">New Today</div>
                         </div>
                     </div>
-                    <div class="card" style="padding:1.5rem">
-                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
-                            <h3>🔴 Live Activity Feed</h3>
-                            <span class="badge blue" id="stream-status">Connecting...</span>
-                        </div>
-                        <div id="live-feed"
-                            style="background:var(--bg);border:1px solid var(--bd);border-radius:6px;height:300px;overflow-y:auto;padding:1rem;font-family:monospace;font-size:0.75rem;color:var(--mu);display:flex;flex-direction:column;gap:0.5rem;">
-                            <!-- Activity lines go here -->
-                        </div>
-                    </div>
                 </div>
 
                 <!-- Users -->
@@ -697,11 +687,10 @@
             $('user-label').textContent = r.data.user.email;
             $('gate').style.display = 'none';
             $('app').style.display = 'block';
-            loadStats(); loadUsers(); loadRoles(); loadAudit(); loadConfig(); connectStream();
+            loadStats(); loadUsers(); loadRoles(); loadAudit(); loadConfig();
         }
 
         function logout() {
-            if (_streamCtrl) _streamCtrl.abort();
             api('/api/auth/logout', { method: 'POST' }).catch(() => { });
             TOKEN = ''; $('gate').style.display = ''; $('app').style.display = 'none';
         }
@@ -724,58 +713,6 @@
             $('st-new').textContent = d.newToday;
         }
 
-        let _streamCtrl = null;
-        async function connectStream() {
-            if (_streamCtrl) _streamCtrl.abort();
-            _streamCtrl = new AbortController();
-            $('stream-status').textContent = 'Connecting...';
-            $('stream-status').className = 'badge am';
-
-            try {
-                const res = await fetch(BASE + '/api/admin/activity/stream', {
-                    headers: { 'Authorization': 'Bearer ' + TOKEN },
-                    signal: _streamCtrl.signal
-                });
-                $('stream-status').textContent = 'Live';
-                $('stream-status').className = 'badge red'; // recording indicator
-
-                const reader = res.body.getReader();
-                const decoder = new TextDecoder();
-                let buffer = '';
-
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-                    buffer += decoder.decode(value, { stream: true });
-                    let lines = buffer.split('\\n\\n');
-                    buffer = lines.pop(); // keep last incomplete chunk
-
-                    for (let chunk of lines) {
-                        if (chunk.trim() === ':') continue; // keepalive
-                        if (chunk.startsWith('data: ')) {
-                            const data = JSON.parse(chunk.substring(6));
-                            if (data.type === 'stat_update') {
-                                $('st-total').textContent = data.totalUsers; // dynamic ping
-                            } else if (data.type === 'audit') {
-                                const feed = $('live-feed');
-                                const line = document.createElement('div');
-                                line.innerHTML = `<span style="color:#7dd3fc">[${new Date(data.log.createdAt).toLocaleTimeString()}]</span> <span style="color:var(--tx)">${data.log.actor}</span> executed <strong style="color:var(--pr)">${data.log.actionType}</strong> on ${data.log.targetId}`;
-                                feed.prepend(line);
-                                if (feed.children.length > 50) feed.lastChild.remove();
-                            }
-                        }
-                    }
-                }
-            } catch (e) {
-                if (e.name !== 'AbortError') {
-                    $('stream-status').textContent = 'Disconnected';
-                    $('stream-status').className = 'badge mu';
-                    setTimeout(connectStream, 4000);
-                }
-            }
-        }
-
-        // ── Users ──────────────────────────────────────────────────────────────────────
         let _uSearch = '';
         async function loadUsers() {
             const r = await api(`/api/admin/users?page=${_uPage}&limit=15&search=${encodeURIComponent(_uSearch)}`);

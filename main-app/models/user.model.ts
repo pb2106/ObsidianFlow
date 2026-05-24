@@ -25,7 +25,6 @@ export interface IUserBase extends Document {
     isDeleted: boolean;
     isVerified: boolean;
     lastLogin: Date | null;
-    loginHistory: ILoginHistory[];
     failedLoginAttempts: number;
     lockoutUntil: Date | null;
     sessions: mongoose.Types.ObjectId[];
@@ -42,10 +41,6 @@ export interface IUserBase extends Document {
     passwordResetExpiry?: Date;
     // Email verification
     emailVerificationToken?: string;
-    // TOTP
-    totpEnabled: boolean;
-    totpSecret?: string;
-    backupCodes: string[];
     [key: string]: unknown; // custom fields
 }
 
@@ -72,20 +67,12 @@ function buildUserSchema(): Schema {
         role: { type: String, required: true, default: reg.standardFields.firstName ? 'user' : 'user', index: true },
         isVerified: { type: Boolean, default: false },
         lastLogin: { type: Date, default: null },
-        loginHistory: [{
-            ip: String,
-            timestamp: { type: Date, default: Date.now },
-            userAgent: String,
-        }],
         failedLoginAttempts: { type: Number, default: 0 },
         lockoutUntil: { type: Date, default: null },
         sessions: [{ type: Schema.Types.ObjectId, ref: 'Session' }],
         passwordResetTokenHash: { type: String, default: null },
         passwordResetExpiry: { type: Date, default: null },
         emailVerificationToken: { type: String, default: null },
-        totpEnabled: { type: Boolean, default: false },
-        totpSecret: { type: String, default: null },
-        backupCodes: { type: [String], default: [] },
     };
 
     // ── Standard fields (conditionally added) ──
@@ -129,6 +116,7 @@ function buildUserSchema(): Schema {
     });
 
     // ── Apply base plugin ──
+    // @ts-ignore
     schema.plugin(basePlugin);
 
     // ── Encryption hooks ──
@@ -166,12 +154,6 @@ function buildUserSchema(): Schema {
         if (doc) decryptDoc(doc);
     });
 
-    // Ensure loginHistory stays capped at 100 entries
-    schema.pre('save', function (this: IUserBase) {
-        if (this.loginHistory.length > 100) {
-            this.loginHistory = this.loginHistory.slice(-100);
-        }
-    });
 
     return schema;
 }
