@@ -176,7 +176,91 @@ Token refresh → POST /api/auth/refresh
   → Return new accessToken, rotate cookie
 ```
 
+## Administration Control
+
+This boilerplate completely separates administrative control away from the Next.js `main-app` so zero admin code executes or leaks onto your production domain. To manage the system locally:
+
+**Standalone Admin Panel (Port 3002)**
+- Starts via `node admin-app/server.js` (or automatically via `node start.js`).
+- Accessible via `http://localhost:3002`.
+- Offers a standard graphic interface (Dashboard, User CRUD, CSV Uploading).
+- Requires you to log in with an `admin` role account.
+
 ---
+
+## Developer Guide: Continuing Your Web App
+
+ObsidianFlow provides the heavy-lifting (user database, authentication, setup pipelines, and security foundation). Now you can build your actual application logic! Here is exactly where to put your code:
+
+### 1. Adding New Pages (Frontend)
+Next.js 14 uses the **App Router**. All frontend routes live inside `main-app/app/`.
+
+- **Public Pages:** Add folders directly to `main-app/app/`.
+  - Example: `main-app/app/about/page.tsx` automatically becomes `http://localhost:3000/about`.
+  - For components that use React state (`useState` or `useEffect`), be sure to put `"use client";` at the very top of the file!
+- **Protected Pages (Requires Login):** Put your routes inside the special `main-app/app/(protected)/` folder.
+  - Our global middleware automatically enforces that only authenticated users can access anything inside `(protected)`. If they aren't logged in, they are bounced to `/login`.
+  - Example: Create `main-app/app/(protected)/dashboard/page.tsx`.
+
+### 2. Creating Custom API Endpoints (Backend)
+If your frontend React client needs to securely talk to the database, add route handlers inside `main-app/app/api/`.
+
+- **Basic Endpoint:** `main-app/app/api/posts/route.ts`
+- **Requiring Authentication:** Wrap your API exported functions securely using the `withAuth` middleware provided by the boilerplate.
+  ```typescript
+  import { withAuth } from '@/lib/middleware/withAuth';
+  import { NextResponse } from 'next/server';
+
+  // withAuth guarantees the request has a valid Session!
+  export const GET = withAuth(async (req) => {
+      // req.user contains the decoded JWT parameters (id, email, role)
+      return NextResponse.json({ success: true, message: `Hello ${req.user.email}` });
+  });
+  ```
+
+### 3. Creating MongoDB Models
+When you need to store custom data (like Posts, Products, Tasks):
+1. Create a file in `main-app/models/` (e.g. `main-app/models/task.model.ts`).
+2. Build your schema using Mongoose.
+3. Import our `basePlugin` from `@/lib/db/plugins/basePlugin` if you want automatic timestamps, custom schema JSON stripping rules, and automated logical soft-deletion!
+  ```typescript
+  import mongoose from 'mongoose';
+  import { basePlugin } from '@/lib/db/plugins/basePlugin';
+
+  const TaskSchema = new mongoose.Schema({
+      userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+      title: { type: String, required: true },
+      completed: { type: Boolean, default: false }
+  });
+  
+  // Attach the boilerplate schema transformer
+  TaskSchema.plugin(basePlugin);
+
+  export const TaskModel = mongoose.models.Task || mongoose.model('Task', TaskSchema);
+  ```
+
+### 4. Reading Database Inside Server Components
+Because Next.js 14 supports React Server Components, you don't actually need API routes if you are just rendering data directly on load!
+```tsx
+import { connectDB } from '@/lib/db/connect';
+import { TaskModel } from '@/models/task.model';
+
+export default async function DashboardPage() {
+    // 1. Establish the connection singleton
+    await connectDB();
+    
+    // 2. Fetch directly from mongo
+    const tasks = await TaskModel.find({ completed: false }).lean();
+    
+    // 3. Render HTML cleanly on the server
+    return (
+        <div>
+            <h1>Your To-Do List</h1>
+            {tasks.map(t => <div key={t._id}>{t.title}</div>)}
+        </div>
+    )
+}
+```
 
 ---
 
