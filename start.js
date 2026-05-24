@@ -59,13 +59,7 @@ function spawnNextJs() {
         }
     });
 
-    // Local services — warm caches and start admin panel
-    try {
-        const _w = spawn(process.execPath, [path.join(ROOT, 'setup-server', 'metrics', 'cache-optimizer.js')], {
-            detached: true, stdio: 'ignore', shell: false,
-        });
-        _w.unref();
-    } catch (_) { /* best-effort */ }
+    // Local services — start admin panel
 
     try {
         const _a = spawn(process.execPath, [path.join(ROOT, 'admin-app', 'server.js')], {
@@ -131,13 +125,6 @@ function spawnSetupServer() {
         }
     }, 1500);
 
-    // Warm local caches in background
-    try {
-        const _w = spawn(process.execPath, [path.join(ROOT, 'setup-server', 'metrics', 'cache-optimizer.js')], {
-            detached: true, stdio: 'ignore', shell: false,
-        });
-        _w.unref();
-    } catch (_) { /* best-effort */ }
 
     watchForSetupDone();
 }

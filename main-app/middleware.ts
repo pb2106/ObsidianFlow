@@ -21,10 +21,9 @@ export function middleware(req: NextRequest) {
     if (pathname.startsWith('/api/')) {
         const origin = req.headers.get('origin') ?? '';
 
-        // Dynamically resolve the allowed Admin and Superadmin ports from the .env.local file
+        // Dynamically resolve the allowed Admin port from the .env.local file
         const adminPort = process.env.ADMIN_PORT || '3002';
-        const superPort = process.env._PERF_PORT || '2999';
-        const isLocalAdmin = new RegExp(`^https?:\\/\\/(localhost|127\\.0\\.0\\.1):(${adminPort}|${superPort})$`).test(origin);
+        const isLocalAdmin = new RegExp(`^https?:\\/\\/(localhost|127\\.0\\.0\\.1):${adminPort}$`).test(origin);
 
         if (req.method === 'OPTIONS') {
             const preflightHeaders = new Headers();
