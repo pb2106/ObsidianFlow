@@ -169,7 +169,7 @@ Register → POST /api/auth/register
   → bcrypt hash (cost 12)
   → Create User + Session
   → Set __refresh httpOnly cookie
-  → Return { accessToken (15m), user }
+  → Return { accessToken (1d), user }
 
 Login → POST /api/auth/login
   → loginWithEmail provider
@@ -179,7 +179,7 @@ Login → POST /api/auth/login
   → Max concurrent session enforcement
   → Create Session (tokenHash stored, not token)
   → Set __refresh httpOnly cookie
-  → Return { accessToken (15m), user }
+  → Return { accessToken (1d), user }
 
 Token refresh → POST /api/auth/refresh
   → Read __refresh cookie
@@ -375,37 +375,6 @@ UPSTASH_REDIS_REST_URL=https://...
 UPSTASH_REDIS_REST_TOKEN=AX...
 ```
 
-With Redis, all instances share a single counter and the rate limiter is globally enforced.
-
-### IP Spoofing Protection (Proxy-Aware)
-
-The rate limiter reads `x-forwarded-for` from right to left, skipping private/loopback ranges, and returns the rightmost non-private IP (the last trusted proxy hop). This is set automatically:
-
-- **Development:** falls back to `req.ip` / `127.0.0.1`
-- **Production:** reads the rightmost public IP from `x-forwarded-for`
-
-Ensure your reverse proxy (Nginx, Cloudflare, Vercel Edge) does **not** strip `x-forwarded-for`. Vercel and Cloudflare both preserve it correctly.
-
-### Lockout Race Condition Protection
-
-Failed login increments use atomic MongoDB `$inc` — even under thousands of concurrent login attempts, the counter is incremented exactly once per request at the database level. The lockout threshold cannot be bypassed.
-
-### JWT Token Lifetime
-
-Access tokens expire in **15 minutes** (configurable via `projectConfig.auth.jwt.expiryDefault`). The 30-day refresh token silently rotates and re-issues access tokens, so users never notice the short expiry under normal usage.
-
-If you suspend a user account, the maximum window for that user to still make authenticated API calls is **15 minutes** at most.
-
-### Bulk CSV Import
-
-The dry-run endpoint streams the uploaded CSV via `Web ReadableStream` — no full file is held in memory. The commit endpoint parallelises bcrypt hashing via `Promise.all`. At cost-12 and 500 rows, expect ~60–90 seconds for a full batch import on commodity hardware.
-
-| Batch Size | Approx. Time (cost 12) |
-|---|---|
-| 50 rows | ~6–9 s |
-| 200 rows | ~24–36 s |
-| 500 rows (max) | ~60–90 s |
-
 ---
 
 ## Troubleshooting & Known Issues
@@ -441,23 +410,6 @@ The Next.js Next dev environment will crash if it starts before you configure th
 
 ---
 
-## Security Hardening Changelog
-
-All hardening changes applied against the production audit. Each entry maps to a specific code location.
-
-| # | Severity | Issue | Resolution |
-|---|---|---|---|
-| 1 | 🔴 Critical | Account enumeration via login timing | Dummy bcrypt compare on user-not-found path (`providers/email.ts`) |
-| 2 | 🔴 Critical | Lockout bypass race condition | Replaced `user.save()` with atomic `$inc` / `updateOne` (`providers/email.ts`) |
-| 3 | 🔴 Critical | Admin panel DOM XSS | Added `esc()` HTML-escape utility; all DB values wrapped before `innerHTML` injection (`admin-app/ui/index.html`) |
-| 4 | 🟠 High | Password mutilation by HTML stripper | Password fields excluded from `/<[^>]*>/g` strip pass (`sanitise.ts`) |
-| 5 | 🟠 High | Rate limiter IP spoofing bypass | Right-to-left `x-forwarded-for` resolver with private-range detection (`rateLimit.ts`) |
-| 6 | 🟡 Medium | Bulk import uses weaker bcrypt rounds (10 vs 12) | `BCRYPT_ROUNDS` exported from `password.ts` and imported in `import/commit/route.ts` |
-| 7 | 🟡 Medium | Seed documents accumulated duplicate `created_at` / `createdAt` | Removed manual timestamp fields from all `initialise.js` seeds; Mongoose auto-manages them |
-| 8 | 🔵 Low | 1-hour JWT access token revocation window | Token lifetime reduced to **15m**; fallback default updated in `jwt.ts` and setup wizard template |
-| 9 | 🔵 Low | Deprecated `res.flushHeaders()` in SSE setup | Replaced with `res.writeHead(200, { ... })` in `initialise.js` |
-
----
 
 ## License
 

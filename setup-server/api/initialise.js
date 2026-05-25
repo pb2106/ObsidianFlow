@@ -91,7 +91,7 @@ export const projectConfig = {
     loginIdentifier: ${JSON.stringify(cfg.loginIdentifier)},
     requireEmailVerification: ${cfg.requireEmailVerification},
     rememberMe: { enabled: ${cfg.rememberMe.enabled}, days: ${cfg.rememberMe.days} },
-    jwt: { expiryDefault: "15m", refreshExpiry: "30d" },
+    jwt: { expiryDefault: "1d", refreshExpiry: "30d" },
     passwordRules: {
       minLength: ${cfg.passwordRules.minLength},
       requireSpecialChar: ${cfg.passwordRules.requireSpecialChar},
