@@ -11,6 +11,7 @@ import { withPermission } from '@/lib/middleware/withRole';
 import { AuthedRequest } from '@/lib/middleware/withAuth';
 import { ok, fail, validationError, secureHeaders } from '@/lib/api/response';
 import bcrypt from 'bcryptjs';
+import { BCRYPT_ROUNDS } from '@/lib/auth/password';
 import { z } from 'zod';
 import { sanitiseBody, validatePassword, validateEmail } from '@/lib/security/sanitise';
 import { revalidateTag } from 'next/cache';
@@ -62,7 +63,7 @@ async function handler(req: AuthedRequest) {
 
     // Parallel hash generation for performance
     const hashedUsers = await Promise.all(parsed.data.users.map(async u => {
-        const passwordHash = await bcrypt.hash(u.password, 10);
+        const passwordHash = await bcrypt.hash(u.password, BCRYPT_ROUNDS);
         return {
             email: u.email,
             passwordHash,

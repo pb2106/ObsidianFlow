@@ -8,7 +8,9 @@ import { connectDB } from '@/lib/db/connect';
 import UserModel from '@/models/user.model';
 import SessionModel from '@/models/session.model';
 import LoginHistoryModel from '@/models/login_history.model';
-import { verifyPassword } from '@/lib/auth/password';
+import { verifyPassword, hashPassword } from '@/lib/auth/password';
+
+const DUMMY_HASH_PROMISE = hashPassword('dummy-password-for-timing');
 import { signAccessToken, signRefreshToken, generateRefreshToken } from '@/lib/auth/jwt';
 import { projectConfig } from '@/config/project.config';
 
@@ -60,6 +62,7 @@ export async function loginWithEmail(params: {
     const user = await UserModel.findOne(query).select('+passwordHash');
 
     if (!user) {
+        await verifyPassword(password, await DUMMY_HASH_PROMISE);
         throw new AuthError('Invalid credentials', 'INVALID_CREDENTIALS');
     }
 
@@ -85,13 +88,26 @@ export async function loginWithEmail(params: {
     const valid = await verifyPassword(password, user.passwordHash);
 
     if (!valid) {
-        // Increment failed attempts
-        user.failedLoginAttempts = (user.failedLoginAttempts ?? 0) + 1;
+        // Increment failed attempts atomically to prevent race conditions
+        const updated = await UserModel.findOneAndUpdate(
+            { _id: user._id },
+            {
+                $inc: { failedLoginAttempts: 1 },
+                $set: { lastFailedLogin: new Date() }
+            },
+            { new: true }
+        );
 
-        if (user.failedLoginAttempts >= projectConfig.security.lockout.attempts) {
-            user.lockoutUntil = new Date(Date.now() + projectConfig.security.lockout.durationMs);
-            user.failedLoginAttempts = 0;
-            await user.save();
+        if (updated && updated.failedLoginAttempts >= projectConfig.security.lockout.attempts) {
+            await UserModel.updateOne(
+                { _id: user._id },
+                {
+                    $set: {
+                        lockoutUntil: new Date(Date.now() + projectConfig.security.lockout.durationMs),
+                        failedLoginAttempts: 0
+                    }
+                }
+            );
             throw new AuthError(
                 `Too many failed attempts. Account locked for ${projectConfig.security.lockout.durationMs / 60000} minutes.`,
                 'ACCOUNT_LOCKED',
@@ -99,7 +115,6 @@ export async function loginWithEmail(params: {
             );
         }
 
-        await user.save();
         // Record failed login attempt
         void LoginHistoryModel.create({
             userId: user._id,

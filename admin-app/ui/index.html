@@ -1089,6 +1089,15 @@
         const fmt = d => typeof d === 'string' ? new Date(d).toLocaleString() : '';
         const rfmt = d => { const s = Math.floor((new Date() - new Date(d)) / 1000); if (s < 60) return s + 's ago'; if (s < 3600) return Math.floor(s / 60) + 'm ago'; return Math.floor(s / 3600) + 'h ago'; };
         const setHtml = (id, html) => { if ($(id)) $(id).innerHTML = html; };
+        function esc(str) {
+            if (str == null) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
 
         function toast(msg, type = 'g') {
             const t = document.createElement('div');
@@ -1150,7 +1159,7 @@
             if (ar.success) {
                 setHtml('dash-recent', ar.data.logs.map(l => {
                     let c = 'g'; if (l.actionType.includes('FAIL')) c = 'a'; if (l.actionType.includes('BLOCK') || l.actionType.includes('DISABLE')) c = 'r';
-                    return `<div style="padding:.8rem;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:.75rem;font-size:.8rem"><span class="dot ${c}"></span><span style="color:var(--mu);width:50px">${rfmt(l.timestamp)}</span><span style="font-weight:500">${l.actor}</span> <span style="color:var(--mu)">${l.actionType}</span></div>`;
+                    return `<div style="padding:.8rem;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:.75rem;font-size:.8rem"><span class="dot ${c}"></span><span style="color:var(--mu);width:50px">${rfmt(l.timestamp)}</span><span style="font-weight:500">${esc(l.actor)}</span> <span style="color:var(--mu)">${esc(l.actionType)}</span></div>`;
                 }).join(''));
             }
         }
@@ -1160,7 +1169,7 @@
             const r = await api(`/api/admin/users?page=${_uPage}&limit=15&search=${encodeURIComponent(_uSearch)}&role=${_uFltR}&status=${_uFltS}`);
             if (!r || !r.success) return;
             $('user-page-info').textContent = `Page ${_uPage} of ${Math.max(1, Math.ceil(r.data.total / 15))}`;
-            setHtml('user-tbody', r.data.users.map(u => `<tr><td><input type="checkbox" class="u-chk" value="${u._id}"></td><td>${u.email}</td><td><span class="badge badge-role">${u.role}</span></td><td><span class="badge ${u.isActive ? 's-active' : 's-disabled'}">${u.isActive ? 'Active' : 'Disabled'}</span></td><td>${fmt(u.createdAt).split(',')[0]}</td><td style="text-align:right"><button class="btn xs ghost" onclick="openUser('${u._id}')">View</button> <button class="btn xs ${u.isActive ? 'danger' : 'ghost'}" onclick="toggleUser('${u._id}',${!u.isActive})">${u.isActive ? 'Disable' : 'Enable'}</button></td></tr>`).join('') || '<tr><td colspan="6" class="empty">No users</td></tr>');
+            setHtml('user-tbody', r.data.users.map(u => `<tr><td><input type="checkbox" class="u-chk" value="${esc(u._id)}"></td><td>${esc(u.email)}</td><td><span class="badge badge-role">${esc(u.role)}</span></td><td><span class="badge ${u.isActive ? 's-active' : 's-disabled'}">${u.isActive ? 'Active' : 'Disabled'}</span></td><td>${fmt(u.createdAt).split(',')[0]}</td><td style="text-align:right"><button class="btn xs ghost" onclick="openUser('${esc(u._id)}')">View</button> <button class="btn xs ${u.isActive ? 'danger' : 'ghost'}" onclick="toggleUser('${esc(u._id)}',${!u.isActive})">${u.isActive ? 'Disable' : 'Enable'}</button></td></tr>`).join('') || '<tr><td colspan="6" class="empty">No users</td></tr>');
         }
         function searchUsers() { _uSearch = $('user-search').value; _uFltR = $('u-flt-role').value; _uFltS = $('u-flt-stat').value; _uPage = 1; loadUsers(); }
         function userPage(d) { _uPage = Math.max(1, _uPage + d); loadUsers(); }
@@ -1177,7 +1186,7 @@
 
             const hr = await api(`/api/admin/users/${id}/login-history`);
             if (hr.success && hr.data.length) {
-                setHtml('um-logins', hr.data.map(h => `<div style="display:flex;justify-content:space-between;padding:.4rem 0;border-bottom:1px solid var(--bd2)"><span style="color:${h.success ? 'var(--ac)' : 'var(--er)'}">${h.success ? 'Success' : 'Failed'}</span> <span style="color:var(--mu)">${h.ip}</span> <span>${fmt(h.createdAt)}</span></div>`).join(''));
+                setHtml('um-logins', hr.data.map(h => `<div style="display:flex;justify-content:space-between;padding:.4rem 0;border-bottom:1px solid var(--bd2)"><span style="color:${h.success ? 'var(--ac)' : 'var(--er)'}">${h.success ? 'Success' : 'Failed'}</span> <span style="color:var(--mu)">${esc(h.ip)}</span> <span>${fmt(h.createdAt)}</span></div>`).join(''));
             } else setHtml('um-logins', '<div class="empty" style="padding:1rem">No login history</div>');
             $('user-modal').classList.add('on');
         }
@@ -1217,14 +1226,14 @@
                 const arr = g.endpoints.filter(e => e.path.toLowerCase().includes(q) || e.description.toLowerCase().includes(q));
                 if (!arr.length) continue;
                 const dis = arr.filter(e => !e.enabled).length;
-                html += `<div class="a-grp"><div class="a-head" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'"><span>${g.area} <span style="color:var(--mu);font-weight:400;font-size:.8rem;margin-left:.5rem">${arr.length} endpoints</span></span> ${dis > 0 ? `<span class="badge s-disabled">${dis} disabled</span>` : ''}</div><div class="a-bod" style="display:block">`;
+                html += `<div class="a-grp"><div class="a-head" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'"><span>${esc(g.area)} <span style="color:var(--mu);font-weight:400;font-size:.8rem;margin-left:.5rem">${arr.length} endpoints</span></span> ${dis > 0 ? `<span class="badge s-disabled">${dis} disabled</span>` : ''}</div><div class="a-bod" style="display:block">`;
                 for (const e of arr) {
                     let b = 'm-get'; if (e.method === 'POST') b = 'm-post'; if (e.method === 'PATCH') b = 'm-patch'; if (e.method === 'DELETE') b = 'm-delete';
                     html += `<div class="a-row">
-        <span class="badge ${b}">${e.method}</span>
-        <span style="font-family:monospace;flex:1">${e.path}</span>
-        <span style="color:var(--mu);font-size:.75rem;flex:1">${e.description}</span>
-        <div class="tgt ${e.enabled ? 'on' : ''} ${!e.canBeDisabled ? 'loc' : ''}" onclick="setEp('${e.id}',this)" title="${!e.canBeDisabled ? 'Core endpoint' : ''}"><div class="tgn"></div></div>
+        <span class="badge ${b}">${esc(e.method)}</span>
+        <span style="font-family:monospace;flex:1">${esc(e.path)}</span>
+        <span style="color:var(--mu);font-size:.75rem;flex:1">${esc(e.description)}</span>
+        <div class="tgt ${e.enabled ? 'on' : ''} ${!e.canBeDisabled ? 'loc' : ''}" onclick="setEp('${esc(e.id)}',this)" title="${!e.canBeDisabled ? 'Core endpoint' : ''}"><div class="tgn"></div></div>
       </div>`;
                 }
                 html += `</div></div>`;
@@ -1297,7 +1306,7 @@
                 if (_ft) { const flts = _ft.split(','); logs = logs.filter(l => flts.some(f => l.actionType.includes(f))); }
                 setHtml('feed-list', logs.map(l => {
                     let c = 'f-b'; if (l.actionType.includes('FAIL')) c = 'f-a'; if (l.actionType.includes('BLOCK') || l.actionType.includes('DISABLE')) c = 'f-r'; if (l.actionType.includes('SUCCESS')) c = 'f-g';
-                    return `<div class="feed-row ${c}"><div style="flex:1"><b>${l.actor}</b> <span style="color:var(--mu);margin-left:.5rem">${l.actionType}</span><div style="font-size:.75rem;margin-top:.2rem;color:var(--tx2)">${l.targetId ? `Target: ${l.targetId}` : 'System event'}</div></div><div style="color:var(--mu);font-size:.75rem">${rfmt(l.timestamp)}</div></div>`;
+                    return `<div class="feed-row ${c}"><div style="flex:1"><b>${esc(l.actor)}</b> <span style="color:var(--mu);margin-left:.5rem">${esc(l.actionType)}</span><div style="font-size:.75rem;margin-top:.2rem;color:var(--tx2)">${l.targetId ? `Target: ${esc(l.targetId)}` : 'System event'}</div></div><div style="color:var(--mu);font-size:.75rem">${rfmt(l.timestamp)}</div></div>`;
                 }).join(''));
             }
         }
@@ -1312,8 +1321,8 @@
         async function loadRoles() {
             const r = await api('/api/admin/roles');
             if (r.success) {
-                setHtml('role-tbody', r.data.map(ro => `<tr><td>${ro.name}${ro.color ? ` <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${ro.color};vertical-align:middle"></span>` : ''}</td><td>${ro.isDefault ? '<span class="badge s-active">Default</span>' : '—'}</td><td style="text-align:right">${!ro.isDefault ? `<button class="btn xs danger" onclick="api('/api/admin/roles/${ro._id}',{method:'DELETE'}).then(loadRoles)">Delete</button>` : '—'}</td></tr>`).join(''));
-                let ropt = '<option value="">All Roles</option>'; r.data.forEach(ro => ropt += `<option value="${ro.name}">${ro.name}</option>`);
+                setHtml('role-tbody', r.data.map(ro => `<tr><td>${esc(ro.name)}${ro.color ? ` <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${esc(ro.color)};vertical-align:middle"></span>` : ''}</td><td>${ro.isDefault ? '<span class="badge s-active">Default</span>' : '—'}</td><td style="text-align:right">${!ro.isDefault ? `<button class="btn xs danger" onclick="api('/api/admin/roles/${esc(ro._id)}',{method:'DELETE'}).then(loadRoles)">Delete</button>` : '—'}</td></tr>`).join(''));
+                let ropt = '<option value="">All Roles</option>'; r.data.forEach(ro => ropt += `<option value="${esc(ro.name)}">${esc(ro.name)}</option>`);
                 setHtml('u-flt-role', ropt); setHtml('um-role', ropt);
             }
         }
@@ -1331,7 +1340,7 @@
         }
         async function commitCSV() { await api('/api/admin/import/commit', { method: 'POST', body: JSON.stringify({ users: _validImportRows }) }); toast('Imported!', 'g'); $('import-stage-2').style.display = 'none'; loadUsers(); }
 
-        async function loadAudit() { const r = await api(`/api/admin/audit?page=${_aPage}&limit=20&actor=${encodeURIComponent($('audit-search').value)}`); if (r.success) { $('audit-page-info').textContent = `Page ${_aPage}`; setHtml('audit-tbody', r.data.logs.map(l => `<tr><td>${fmt(l.timestamp)}</td><td>${l.actor}</td><td><span class="badge m-patch">${l.actionType}</span></td><td>${l.targetId || ''}</td></tr>`).join('')); } }
+        async function loadAudit() { const r = await api(`/api/admin/audit?page=${_aPage}&limit=20&actor=${encodeURIComponent($('audit-search').value)}`); if (r.success) { $('audit-page-info').textContent = `Page ${_aPage}`; setHtml('audit-tbody', r.data.logs.map(l => `<tr><td>${fmt(l.timestamp)}</td><td>${esc(l.actor)}</td><td><span class="badge m-patch">${esc(l.actionType)}</span></td><td>${esc(l.targetId || '')}</td></tr>`).join('')); } }
     </script>
 </body>
 

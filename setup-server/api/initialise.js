@@ -18,10 +18,12 @@ module.exports = async function initialise(req, res) {
     const cfg = req.body;
 
     // Set up SSE
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-    res.flushHeaders();
+    res.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+    });
+    // Flush immediately so the client receives progress events line-by-line
 
     const step = (msg, ok = true) => {
         res.write(`data: ${JSON.stringify({ ok, msg })}\n\n`);
@@ -89,7 +91,7 @@ export const projectConfig = {
     loginIdentifier: ${JSON.stringify(cfg.loginIdentifier)},
     requireEmailVerification: ${cfg.requireEmailVerification},
     rememberMe: { enabled: ${cfg.rememberMe.enabled}, days: ${cfg.rememberMe.days} },
-    jwt: { expiryDefault: "1h", refreshExpiry: "30d" },
+    jwt: { expiryDefault: "15m", refreshExpiry: "30d" },
     passwordRules: {
       minLength: ${cfg.passwordRules.minLength},
       requireSpecialChar: ${cfg.passwordRules.requireSpecialChar},
@@ -189,7 +191,6 @@ export type ProjectConfig = typeof projectConfig;
             maintenance_mode: false,
             maintenance_message: '',
             runtime_config: {},
-            created_at: new Date(),
         });
         step('system_config seeded ✓');
 
@@ -202,7 +203,6 @@ export type ProjectConfig = typeof projectConfig;
                 color: r.color,
                 isDefault: r.isDefault,
                 permissions: {},
-                created_at: new Date(),
             }))
         );
         step('Roles seeded ✓');
@@ -227,8 +227,6 @@ export type ProjectConfig = typeof projectConfig;
             lockoutUntil: null,
             lastLogin: null,
             sessions: [],
-            created_at: new Date(),
-            updated_at: new Date(),
         });
         step('Admin user created ✓');
 

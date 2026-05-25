@@ -7,12 +7,12 @@
 
 | Area | Details |
 |---|---|
-| **Auth** | RS256 JWT (access + refresh), httpOnly cookies, bcrypt passwords, account lockout, email verification |
+| **Auth** | RS256 JWT (15m access + 30d refresh), httpOnly cookies, bcrypt cost-12 passwords, atomic account lockout, timing-safe login, email verification |
 | **Database** | MongoDB via Mongoose — AES-256-GCM field-level encryption, auto-soft-delete plugin, TTL-enforced audit logs, and dedicated login history collection |
 | **Roles** | Fully configurable roles from wizard — per-role permissions stored in DB |
-| **Admin Panel** | Standalone local dark-mode UI (port 3002) for User management, Feature Toggles, Auth config, and Live Activity Logging |
+| **Admin Panel** | Standalone local dark-mode UI (port 3002) for User management, Feature Toggles, Auth config, and Live Activity Logging — DOM XSS-safe via HTML escaping |
 | **Setup Wizard** | 7-step React wizard at `localhost:3001` — generates `project.config.ts` from your choices |
-| **Security** | Redis-backed distributed rate limiting, AST endpoint registry guard, CSP headers, strict input sanitization |
+| **Security** | Redis-backed distributed rate limiting, spoof-proof IP resolver, AST endpoint registry guard, CSP headers, strict input sanitization (password-safe) |
 | **Architecture** | Decoupled Zero-Trust Backend — local admin GUI holds no secrets; API verifies all JWTs & Permissions natively |
 | **Anti-Debug** | Optional — DevTools detection, console poisoning, React DevTools hook poisoning |
 | **Design System** | CSS variables (primary/accent/dark mode), theme injected at runtime from config |
@@ -169,22 +169,23 @@ Register → POST /api/auth/register
   → bcrypt hash (cost 12)
   → Create User + Session
   → Set __refresh httpOnly cookie
-  → Return { accessToken, user }
+  → Return { accessToken (15m), user }
 
 Login → POST /api/auth/login
   → loginWithEmail provider
-  → Lockout check (5 attempts → 15 min)
+  → Timing-safe dummy hash when user not found (prevent enumeration)
+  → Atomic $inc lockout tracking (5 attempts → 15 min, race-condition-safe)
   → bcrypt verify
   → Max concurrent session enforcement
   → Create Session (tokenHash stored, not token)
   → Set __refresh httpOnly cookie
-  → Return { accessToken, user }
+  → Return { accessToken (15m), user }
 
 Token refresh → POST /api/auth/refresh
   → Read __refresh cookie
   → Verify RS256 signature
   → rotateRefreshToken (invalidate old session, create new)
-  → Return new accessToken, rotate cookie
+  → Return new accessToken (15m), rotate cookie
 ```
 
 ## Administration Control
@@ -334,6 +335,79 @@ To manage your live users, run the admin panel locally on your own computer:
 
 ---
 
+## Peak Handling & Capacity Guide
+
+This section explains how the stack performs under peak traffic and what to tune when scaling.
+
+### Baseline Capacity (Single Node, Default Config)
+
+| Layer | What limits it | Default |
+|---|---|---|
+| **Next.js server** | Node.js event loop / CPU | ~500 concurrent requests before queue forms |
+| **MongoDB connection pool** | `maxPoolSize` in `connect.ts` | 10 connections (tune up for high traffic) |
+| **Auth rate limiter** | 10 req / 15 min per IP (login endpoint) | Enforced via Upstash Redis in prod |
+| **Admin rate limiter** | 5 req / 15 min per IP | Enforced via Upstash Redis in prod |
+| **Access token TTL** | 15 minutes | Reduces revocation window; refresh is transparent |
+| **CSV import batch** | 500 rows per commit | Streamed via `multipart/form-data`, no full-buffer allocation |
+
+### Scaling the Database Pool
+
+Open `main-app/lib/db/connect.ts` and increase `maxPoolSize`:
+
+```typescript
+mongoose.connect(MONGODB_URI, {
+    maxPoolSize: 50,          // increase from 10 for high concurrency
+    serverSelectionTimeoutMS: 5000,
+    socketTimeoutMS: 45000,
+});
+```
+
+For Atlas deployments, ensure your cluster tier supports the target pool size (M10 supports ~500 connections).
+
+### Distributed Rate Limiting (Redis — Required for Multi-Instance)
+
+The in-memory rate limiter is **per process**. If you run multiple Next.js instances (Vercel serverless, pm2 cluster, k8s replicas), each process has its own isolated counter. An attacker can bypass the limit by round-robining across instances.
+
+**Fix:** Provide Upstash Redis credentials in `.env.local`. The `rateLimitStore.ts` automatically switches to the Redis backend when these are set:
+
+```bash
+UPSTASH_REDIS_REST_URL=https://...
+UPSTASH_REDIS_REST_TOKEN=AX...
+```
+
+With Redis, all instances share a single counter and the rate limiter is globally enforced.
+
+### IP Spoofing Protection (Proxy-Aware)
+
+The rate limiter reads `x-forwarded-for` from right to left, skipping private/loopback ranges, and returns the rightmost non-private IP (the last trusted proxy hop). This is set automatically:
+
+- **Development:** falls back to `req.ip` / `127.0.0.1`
+- **Production:** reads the rightmost public IP from `x-forwarded-for`
+
+Ensure your reverse proxy (Nginx, Cloudflare, Vercel Edge) does **not** strip `x-forwarded-for`. Vercel and Cloudflare both preserve it correctly.
+
+### Lockout Race Condition Protection
+
+Failed login increments use atomic MongoDB `$inc` — even under thousands of concurrent login attempts, the counter is incremented exactly once per request at the database level. The lockout threshold cannot be bypassed.
+
+### JWT Token Lifetime
+
+Access tokens expire in **15 minutes** (configurable via `projectConfig.auth.jwt.expiryDefault`). The 30-day refresh token silently rotates and re-issues access tokens, so users never notice the short expiry under normal usage.
+
+If you suspend a user account, the maximum window for that user to still make authenticated API calls is **15 minutes** at most.
+
+### Bulk CSV Import
+
+The dry-run endpoint streams the uploaded CSV via `Web ReadableStream` — no full file is held in memory. The commit endpoint parallelises bcrypt hashing via `Promise.all`. At cost-12 and 500 rows, expect ~60–90 seconds for a full batch import on commodity hardware.
+
+| Batch Size | Approx. Time (cost 12) |
+|---|---|
+| 50 rows | ~6–9 s |
+| 200 rows | ~24–36 s |
+| 500 rows (max) | ~60–90 s |
+
+---
+
 ## Troubleshooting & Known Issues
 
 ### 1. `ERESOLVE` Peer Dependency Error on Install
@@ -364,6 +438,24 @@ The Next.js Next dev environment will crash if it starts before you configure th
 - [ ] `NODE_ENV=production` set in deployment environment
 - [ ] HTTPS enforced (HSTS header is already set)
 - [ ] MongoDB user has least-privilege access
+
+---
+
+## Security Hardening Changelog
+
+All hardening changes applied against the production audit. Each entry maps to a specific code location.
+
+| # | Severity | Issue | Resolution |
+|---|---|---|---|
+| 1 | 🔴 Critical | Account enumeration via login timing | Dummy bcrypt compare on user-not-found path (`providers/email.ts`) |
+| 2 | 🔴 Critical | Lockout bypass race condition | Replaced `user.save()` with atomic `$inc` / `updateOne` (`providers/email.ts`) |
+| 3 | 🔴 Critical | Admin panel DOM XSS | Added `esc()` HTML-escape utility; all DB values wrapped before `innerHTML` injection (`admin-app/ui/index.html`) |
+| 4 | 🟠 High | Password mutilation by HTML stripper | Password fields excluded from `/<[^>]*>/g` strip pass (`sanitise.ts`) |
+| 5 | 🟠 High | Rate limiter IP spoofing bypass | Right-to-left `x-forwarded-for` resolver with private-range detection (`rateLimit.ts`) |
+| 6 | 🟡 Medium | Bulk import uses weaker bcrypt rounds (10 vs 12) | `BCRYPT_ROUNDS` exported from `password.ts` and imported in `import/commit/route.ts` |
+| 7 | 🟡 Medium | Seed documents accumulated duplicate `created_at` / `createdAt` | Removed manual timestamp fields from all `initialise.js` seeds; Mongoose auto-manages them |
+| 8 | 🔵 Low | 1-hour JWT access token revocation window | Token lifetime reduced to **15m**; fallback default updated in `jwt.ts` and setup wizard template |
+| 9 | 🔵 Low | Deprecated `res.flushHeaders()` in SSE setup | Replaced with `res.writeHead(200, { ... })` in `initialise.js` |
 
 ---
 

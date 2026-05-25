@@ -61,12 +61,15 @@ function _walk(input: unknown, key: string): any {
     if (typeof input === 'string') {
         // 1. Trim Edge Spaces
         let clean = input.trim();
+        const kLow = key.toLowerCase();
 
-        // 2. Strip standard HTML markup
-        clean = clean.replace(/<[^>]*>/g, '');
+        // 2. Strip standard HTML markup unless it's a password
+        const skipHtmlStrip = ['password', 'newpassword', 'confirmpassword', 'currentpassword'].includes(kLow);
+        if (!skipHtmlStrip) {
+            clean = clean.replace(/<[^>]*>/g, '');
+        }
 
         // 3. Enforce precise sizing overrides
-        const kLow = key.toLowerCase();
         if (kLow.includes('email')) {
             if (clean.length > 254) throw new Error('[Security] Email entity exceeds maximum allowable length of 254 bytes.');
         } else if (kLow.includes('password')) {

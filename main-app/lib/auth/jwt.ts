@@ -51,7 +51,11 @@ export interface TokenPayload {
 
 // ─── Sign access token ────────────────────────────────────────────────────────
 export function signAccessToken(payload: Omit<TokenPayload, 'type'>): string {
-    const expiry = projectConfig.auth.jwt.expiryDefault || '1h';
+    // Access tokens are intentionally short-lived (15m default).
+    // This limits the window of exposure if a token is intercepted or if a user
+    // is suspended — the impact is capped to 15 minutes maximum.
+    // Refresh token rotation silently renews tokens for active users.
+    const expiry = projectConfig.auth.jwt.expiryDefault || '15m';
     const opts: SignOptions = { algorithm: 'RS256', expiresIn: expiry as SignOptions['expiresIn'] };
     return jwt.sign({ ...payload, type: 'access' }, getPrivateKey(), opts);
 }

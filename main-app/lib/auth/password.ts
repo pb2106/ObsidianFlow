@@ -6,7 +6,7 @@
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 
-const BCRYPT_ROUNDS = 12;
+export const BCRYPT_ROUNDS = 12;
 
 // ─── Hash a plain password ────────────────────────────────────────────────────
 export async function hashPassword(plain: string): Promise<string> {
