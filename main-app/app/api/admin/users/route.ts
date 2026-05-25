@@ -22,7 +22,7 @@ async function handler(req: AuthedRequest) {
     const sortBy = url.searchParams.get('sortBy') ?? 'createdAt';
     const sortDir = url.searchParams.get('sortDir') === 'asc' ? 1 : -1;
 
-    const filter: Record<string, unknown> = { isDeleted: false };
+    const filter: Record<string, unknown> = {};
     if (search) {
         const regex = { $regex: search, $options: 'i' };
         filter.$or = [{ email: regex }, { firstName: regex }, { lastName: regex }, { username: regex }];
@@ -33,7 +33,7 @@ async function handler(req: AuthedRequest) {
 
     const [users, total] = await Promise.all([
         UserModel.find(filter)
-            .select('-passwordHash -passwordResetTokenHash -totpSecret -backupCodes -loginHistory -sessions -emailVerificationToken')
+            .select('-passwordHash -passwordResetTokenHash -totpSecret -backupCodes -sessions -emailVerificationToken')
             .sort({ [sortBy]: sortDir })
             .skip((page - 1) * limit)
             .limit(limit)

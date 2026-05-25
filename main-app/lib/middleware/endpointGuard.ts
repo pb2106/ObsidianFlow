@@ -29,11 +29,33 @@ async function getDisabledEndpoints(): Promise<Set<string>> {
 
 type Handler = (req: NextRequest, ctx: { params: Record<string, string> }) => Promise<NextResponse>;
 
-export function endpointGuard(endpointId: string, handler: Handler): Handler {
+export function endpointGuard(legacyEndpointId: string, handler: Handler): Handler {
     return async function (req: NextRequest, ctx: { params: Record<string, string> }) {
         const disabled = await getDisabledEndpoints();
+        const { buildEndpointRegistry } = await import('@/lib/endpoints/registry');
 
-        if (disabled.has(endpointId)) {
+        const path = req.nextUrl.pathname;
+        const method = req.method;
+
+        // Lazily build registry — hits cache in production
+        const registry = buildEndpointRegistry();
+
+        let matchedId: string | null = null;
+        for (const entry of registry) {
+            if (entry.method === method) {
+                let pattern = entry.path.replace(/\//g, '\\/');
+                pattern = pattern.replace(/:(\.\.\.\w+)/g, '.*'); // catch-all
+                pattern = pattern.replace(/:\w+/g, '[^\\/]+');    // singular params
+
+                const regex = new RegExp(`^${pattern}$`);
+                if (regex.test(path)) {
+                    matchedId = entry.id;
+                    break;
+                }
+            }
+        }
+
+        if (matchedId && disabled.has(matchedId)) {
             return NextResponse.json(
                 {
                     success: false,

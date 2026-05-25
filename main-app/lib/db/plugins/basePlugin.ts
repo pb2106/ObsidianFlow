@@ -25,15 +25,24 @@ export function basePlugin(schema: Schema): void {
     };
 
     // ── Auto-filter deleted docs in queries ────────────────────────────────────
-    // Only applies when the caller hasn't explicitly set isDeleted in their filter.
+    // Applies unless the caller explicitly sets includeDeleted: true
     const filterDeleted = function (this: Query<unknown, unknown>) {
-        if (this.getFilter().isDeleted === undefined) {
+        const query = this.getFilter();
+
+        if (query.includeDeleted === true) {
+            delete query.includeDeleted;
+        } else if (query.isDeleted === undefined) {
             this.where({ isDeleted: { $ne: true } });
         }
     };
 
+    // Apply to all requested Mongoose find variants
     schema.pre('find', filterDeleted);
     schema.pre('findOne', filterDeleted);
     schema.pre('findOneAndUpdate', filterDeleted);
+    schema.pre('findOneAndDelete', filterDeleted);
     schema.pre('countDocuments', filterDeleted);
+    // Bypass strict TS typing for findById and exists which are officially wrappers but explicitly requested
+    (schema as any).pre('findById', filterDeleted);
+    (schema as any).pre('exists', filterDeleted);
 }

@@ -61,7 +61,7 @@ async function handler(req: AuthedRequest) {
 
         // Validate target role exists
         if (role !== 'admin' && role !== 'user') {
-            const exists = await RoleModel.exists({ name: role, isDeleted: false, isActive: true });
+            const exists = await RoleModel.exists({ name: role, isActive: true });
             if (!exists) return fail(`Role '${role}' does not exist`, 'INVALID_ROLE', 400);
         }
     }
@@ -72,7 +72,7 @@ async function handler(req: AuthedRequest) {
     if (action === 'set_role') updateQuery = { role: role };
 
     const result = await UserModel.updateMany(
-        { _id: { $in: userIds }, isDeleted: false },
+        { _id: { $in: userIds } },
         { $set: updateQuery }
     );
 

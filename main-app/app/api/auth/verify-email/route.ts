@@ -35,7 +35,7 @@ async function handler(req: NextRequest) {
 
     const { token } = parsed.data;
 
-    const user = await UserModel.findOne({ emailVerificationToken: token, isDeleted: false });
+    const user = await UserModel.findOne({ emailVerificationToken: token });
 
     if (!user) {
         return fail('Verification token is invalid', 'INVALID_TOKEN', 400);

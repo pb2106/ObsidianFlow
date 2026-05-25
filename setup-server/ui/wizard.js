@@ -21781,6 +21781,8 @@
     mongoUri: "",
     dbName: "",
     dbTestPassed: false,
+    upstashUrl: "",
+    upstashToken: "",
     // Step 3
     providers: ["email"],
     loginIdentifier: "email",
@@ -21907,7 +21909,11 @@
       feedback && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: `db-feedback ${feedback.status === "ok" ? "ok" : feedback.status === "err" ? "err" : ""}`, children: feedback.msg }),
       errors.dbTestPassed && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "error-msg", style: { marginTop: ".5rem" }, children: errors.dbTestPassed }),
       /* @__PURE__ */ (0, import_jsx_runtime.jsx)("hr", { className: "divider" }),
-      /* @__PURE__ */ (0, import_jsx_runtime.jsx)(FormGroup, { label: "Database Name", hint: "Defaults to the name in your URI", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", { value: data.dbName, onChange: (e) => set("dbName", e.target.value), placeholder: "my-app-db" }) })
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)(FormGroup, { label: "Database Name", hint: "Defaults to the name in your URI", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", { value: data.dbName, onChange: (e) => set("dbName", e.target.value), placeholder: "my-app-db" }) }),
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("hr", { className: "divider" }),
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("label", { style: { marginBottom: ".6rem", display: "block" }, children: "Redis Rate Limiting (Production) - Optional" }),
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)(FormGroup, { label: "Upstash Redis URL", hint: "e.g. https://eu2-evident-rhino-11223.upstash.io", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", { value: data.upstashUrl, onChange: (e) => set("upstashUrl", e.target.value), placeholder: "https://..." }) }),
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)(FormGroup, { label: "Upstash Redis Token", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", { type: "password", value: data.upstashToken, onChange: (e) => set("upstashToken", e.target.value), placeholder: "Secret token" }) })
     ] });
   }
   function Step3({ data, set }) {
@@ -22235,6 +22241,10 @@
         /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "review-kv", children: [
           /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "URI: " }),
           "****" + data.mongoUri.slice(-20)
+        ] }),
+        data.upstashUrl && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "review-kv", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "Upstash: " }),
+          data.upstashUrl
         ] })
       ] }),
       /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "review-section", children: [

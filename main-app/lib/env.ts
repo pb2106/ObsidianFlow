@@ -57,6 +57,16 @@ const SPECS: EnvSpec[] = [
         key: 'NEXTAUTH_URL',
         required: false,
     },
+    // Upstash Redis
+    {
+        key: 'UPSTASH_REDIS_REST_URL',
+        required: false,
+    },
+    {
+        key: 'UPSTASH_REDIS_REST_TOKEN',
+        required: false,
+        secret: true,
+    },
     // Node env
     {
         key: 'NODE_ENV',
@@ -88,6 +98,13 @@ export function validateEnv(): void {
             if (err) {
                 errors.push(`❌ Invalid ${spec.key}: ${err}`);
             }
+        }
+    }
+
+    // Upstash check: warn if missing in production but do not crash
+    if (process.env.NODE_ENV === 'production') {
+        if (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN) {
+            console.warn('⚠️  [env] UPSTASH_REDIS_REST_URL or UPSTASH_REDIS_REST_TOKEN is missing. Rate limiting will fall back to memory-only, which does NOT work correctly across multiple instances in production.');
         }
     }
 

@@ -31,6 +31,8 @@ const RoleSchema = new Schema<IRole>(
 
 RoleSchema.plugin(basePlugin);
 RoleSchema.index({ name: 1 }, { unique: true });
+// Used during user registration to find the default role
+RoleSchema.index({ isDefault: 1 });
 
 const RoleModel: Model<IRole> =
     (mongoose.models['Role'] as Model<IRole>) ??

@@ -34,6 +34,9 @@ const SystemConfigSchema = new Schema<ISystemConfig>(
 
 SystemConfigSchema.plugin(basePlugin);
 
+// Singleton lookup — always queried by setup_complete: true
+SystemConfigSchema.index({ setup_complete: 1 });
+
 const SystemConfigModel: Model<ISystemConfig> =
     (mongoose.models['SystemConfig'] as Model<ISystemConfig>) ??
     mongoose.model<ISystemConfig>('SystemConfig', SystemConfigSchema);

@@ -7,6 +7,7 @@
 import { connectDB } from '@/lib/db/connect';
 import UserModel from '@/models/user.model';
 import SessionModel from '@/models/session.model';
+import LoginHistoryModel from '@/models/login_history.model';
 import { verifyPassword } from '@/lib/auth/password';
 import { signAccessToken, signRefreshToken, generateRefreshToken } from '@/lib/auth/jwt';
 import { projectConfig } from '@/config/project.config';
@@ -99,6 +100,14 @@ export async function loginWithEmail(params: {
         }
 
         await user.save();
+        // Record failed login attempt
+        void LoginHistoryModel.create({
+            userId: user._id,
+            ip,
+            userAgent,
+            success: false,
+            failureReason: 'INVALID_CREDENTIALS',
+        }).catch(() => { /* non-critical */ });
         throw new AuthError('Invalid credentials', 'INVALID_CREDENTIALS');
     }
 
@@ -125,6 +134,14 @@ export async function loginWithEmail(params: {
     user.lockoutUntil = null;
     user.sessions.push(session._id as unknown as typeof user.sessions[number]);
     await user.save();
+
+    // Record successful login to dedicated collection
+    void LoginHistoryModel.create({
+        userId: user._id,
+        ip,
+        userAgent,
+        success: true,
+    }).catch(() => { /* non-critical */ });
 
     // ── Sign tokens ──
     const tokenPayload = {

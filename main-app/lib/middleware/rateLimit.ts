@@ -7,21 +7,9 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 
-// ─── In-memory store ──────────────────────────────────────────────────────────
-interface WindowEntry {
-    count: number;
-    resetAt: number; // epoch ms
-}
+import { createRateLimitStore } from './rateLimitStore';
 
-const store = new Map<string, WindowEntry>();
-
-// Clean up stale entries every 5 minutes to prevent memory leak
-setInterval(() => {
-    const now = Date.now();
-    for (const [key, entry] of store) {
-        if (entry.resetAt < now) store.delete(key);
-    }
-}, 5 * 60 * 1000);
+const store = createRateLimitStore();
 
 // ─── Core check ───────────────────────────────────────────────────────────────
 interface RateLimitConfig {
@@ -35,22 +23,14 @@ interface RateLimitResult {
     resetAt: number;
 }
 
-function checkRateLimit(key: string, config: RateLimitConfig): RateLimitResult {
-    const now = Date.now();
-    const entry = store.get(key);
+async function checkRateLimit(key: string, config: RateLimitConfig): Promise<RateLimitResult> {
+    const { count, resetAt } = await store.increment(key, config.windowMs);
 
-    if (!entry || entry.resetAt < now) {
-        // Fresh window
-        store.set(key, { count: 1, resetAt: now + config.windowMs });
-        return { allowed: true, remaining: config.max - 1, resetAt: now + config.windowMs };
+    if (count > config.max) {
+        return { allowed: false, remaining: 0, resetAt };
     }
 
-    if (entry.count >= config.max) {
-        return { allowed: false, remaining: 0, resetAt: entry.resetAt };
-    }
-
-    entry.count++;
-    return { allowed: true, remaining: config.max - entry.count, resetAt: entry.resetAt };
+    return { allowed: true, remaining: config.max - count, resetAt };
 }
 
 // ─── Middleware factory ────────────────────────────────────────────────────────
@@ -65,7 +45,7 @@ export function rateLimit(config: RateLimitConfig, keyPrefix = 'rl') {
                 ?? 'unknown';
             const key = `${keyPrefix}:${ip}`;
 
-            const result = checkRateLimit(key, config);
+            const result = await checkRateLimit(key, config);
 
             if (!result.allowed) {
                 const retryAfter = Math.ceil((result.resetAt - Date.now()) / 1000);

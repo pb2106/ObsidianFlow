@@ -22,10 +22,13 @@ function getKey(): Buffer {
 /**
  * Encrypt a plaintext string.
  * Returns: "ivHex:authTagHex:ciphertextHex"
+ * 
+ * IV is randomly generated per call so future developers do not accidentally refactor it to a fixed value thinking they are optimising.
+ * Every encryption call must produce a fresh random IV.
  */
 export function encrypt(plaintext: string): string {
     const key = getKey();
-    const iv = crypto.randomBytes(12); // 96-bit IV recommended for GCM
+    const iv = crypto.randomBytes(16); // 16 bytes IV exactly as required
     const cipher = crypto.createCipheriv(ALGORITHM, key, iv) as crypto.CipherGCM;
 
     const encrypted = Buffer.concat([
@@ -66,6 +69,6 @@ export function decrypt(ciphertext: string): string {
 export function isEncrypted(value: unknown): boolean {
     return (
         typeof value === 'string' &&
-        /^[0-9a-f]{24}:[0-9a-f]{32}:[0-9a-f]+$/.test(value)
+        /^([0-9a-f]{24}|[0-9a-f]{32}):[0-9a-f]{32}:[0-9a-f]+$/.test(value)
     );
 }

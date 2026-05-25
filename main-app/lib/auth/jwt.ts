@@ -14,13 +14,30 @@ import bcrypt from 'bcryptjs';
 function getPrivateKey(): string {
     const raw = process.env.JWT_PRIVATE_KEY;
     if (!raw) throw new Error('[jwt] JWT_PRIVATE_KEY is not set');
-    return raw.replace(/\\n/g, '\n');
+    return raw.replace(/\\\\n/g, '\n').replace(/\\n/g, '\n');
 }
 
 function getPublicKey(): string {
     const raw = process.env.JWT_PUBLIC_KEY;
     if (!raw) throw new Error('[jwt] JWT_PUBLIC_KEY is not set');
-    return raw.replace(/\\n/g, '\n');
+    return raw.replace(/\\\\n/g, '\n').replace(/\\n/g, '\n');
+}
+
+// Startup check to prevent silent auth failures
+const _startupPriv = process.env.JWT_PRIVATE_KEY;
+if (_startupPriv) {
+    const formatted = _startupPriv.replace(/\\\\n/g, '\n').replace(/\\n/g, '\n');
+    if (!formatted.startsWith('-----BEGIN')) {
+        throw new Error('[jwt] JWT_PRIVATE_KEY is malformed: does not start with -----BEGIN. The likely cause is escaped newlines in the environment variable.');
+    }
+}
+
+const _startupPub = process.env.JWT_PUBLIC_KEY;
+if (_startupPub) {
+    const formatted = _startupPub.replace(/\\\\n/g, '\n').replace(/\\n/g, '\n');
+    if (!formatted.startsWith('-----BEGIN')) {
+        throw new Error('[jwt] JWT_PUBLIC_KEY is malformed: does not start with -----BEGIN. The likely cause is escaped newlines in the environment variable.');
+    }
 }
 
 // ─── Payload shape ────────────────────────────────────────────────────────────
@@ -130,7 +147,7 @@ async function findSessionByRawToken(rawToken: string) {
     const decoded = jwt.decode(rawToken) as TokenPayload & JwtPayload | null;
     if (!decoded?.sub) return null;
 
-    const sessions = await SessionModel.find({ userId: decoded.sub, isDeleted: false }).lean();
+    const sessions = await SessionModel.find({ userId: decoded.sub }).lean();
     for (const s of sessions) {
         const match = await bcrypt.compare(rawToken, s.refreshTokenHash);
         if (match) return await SessionModel.findById(s._id);

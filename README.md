@@ -8,11 +8,11 @@
 | Area | Details |
 |---|---|
 | **Auth** | RS256 JWT (access + refresh), httpOnly cookies, bcrypt passwords, account lockout, email verification |
-| **Database** | MongoDB via Mongoose — singleton connection, AES-256-GCM field-level encryption, soft-delete plugin |
+| **Database** | MongoDB via Mongoose — AES-256-GCM field-level encryption, auto-soft-delete plugin, TTL-enforced audit logs, and dedicated login history collection |
 | **Roles** | Fully configurable roles from wizard — per-role permissions stored in DB |
-| **Admin Panel** | Standalone local UI (port 3002) for User management, role CRUD, system config |
+| **Admin Panel** | Standalone local dark-mode UI (port 3002) for User management, Feature Toggles, Auth config, and Live Activity Logging |
 | **Setup Wizard** | 7-step React wizard at `localhost:3001` — generates `project.config.ts` from your choices |
-| **Security** | Rate limiting, endpoint guard (disable any route at runtime), CSP headers, no source maps in prod |
+| **Security** | Redis-backed distributed rate limiting, AST endpoint registry guard, CSP headers, strict input sanitization |
 | **Architecture** | Decoupled Zero-Trust Backend — local admin GUI holds no secrets; API verifies all JWTs & Permissions natively |
 | **Anti-Debug** | Optional — DevTools detection, console poisoning, React DevTools hook poisoning |
 | **Design System** | CSS variables (primary/accent/dark mode), theme injected at runtime from config |
@@ -85,6 +85,8 @@ cp .env.example main-app/.env.local
 | `JWT_PUBLIC_KEY` | ✅ | RS256 PEM public key |
 | `AES_ENCRYPTION_KEY` | ✅ | 32-byte key as 64-char hex or base64-44 |
 | `NODE_ENV` | ⬜ | `development` (default) or `production` |
+| `UPSTASH_REDIS_REST_URL` | ⬜ | Redis URL (Production distributed rate-limiting fallback) |
+| `UPSTASH_REDIS_REST_TOKEN` | ⬜ | Redis Token |
 
 **Generate RS256 key pair:**
 ```bash
@@ -132,8 +134,8 @@ ObsidianFlow/
 │   │   ├── client/            # anti-debug.ts
 │   │   ├── db/                # connect.ts, encryption.ts, plugins/
 │   │   ├── middleware/        # withAuth, withRole, rateLimit, endpointGuard
-│   │   └── api/               # response.ts, schemas.ts
-│   ├── models/                # user, session, role, system_config, audit_log
+│   │   ├── api/               # response.ts, schemas.ts
+│   ├── models/                # user, session, role, system_config, audit_log, login_history
 │   ├── middleware.ts           # Edge setupGuard, Admin CORS checks
 │   └── next.config.mjs        # Security headers, no source maps, CSP
 │
@@ -192,7 +194,7 @@ This boilerplate completely separates administrative control away from the Next.
 **Standalone Admin Panel (Port 3002)**
 - Starts via `node admin-app/server.js` (or automatically via `node start.js`).
 - Accessible via `http://localhost:3002`.
-- Offers a standard graphic interface (Dashboard, User CRUD, CSV Uploading).
+- Offers a fully featured dark-mode interface: Dashboard stats, realtime Activity Feed, Dynamic Endpoint Route toggling, User CRUD, and direct disk configuration editing for Auth Settings.
 - Requires you to log in with an `admin` role account.
 
 ### ⚠️ Important: Modifying the Admin Panel

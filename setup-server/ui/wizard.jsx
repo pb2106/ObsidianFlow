@@ -19,7 +19,7 @@ const INIT = {
     projectName: '', tagline: '', supportEmail: '', baseUrl: 'http://localhost:3000',
     timezone: 'UTC', logo: null,
     // Step 2
-    mongoUri: '', dbName: '', dbTestPassed: false,
+    mongoUri: '', dbName: '', dbTestPassed: false, upstashUrl: '', upstashToken: '',
     // Step 3
     providers: ['email'],
     loginIdentifier: 'email',
@@ -189,6 +189,15 @@ function Step2({ data, set, errors }) {
             <hr className="divider" />
             <FormGroup label="Database Name" hint="Defaults to the name in your URI">
                 <input value={data.dbName} onChange={e => set('dbName', e.target.value)} placeholder="my-app-db" />
+            </FormGroup>
+
+            <hr className="divider" />
+            <label style={{ marginBottom: '.6rem', display: 'block' }}>Redis Rate Limiting (Production) - Optional</label>
+            <FormGroup label="Upstash Redis URL" hint="e.g. https://eu2-evident-rhino-11223.upstash.io">
+                <input value={data.upstashUrl} onChange={e => set('upstashUrl', e.target.value)} placeholder="https://..." />
+            </FormGroup>
+            <FormGroup label="Upstash Redis Token">
+                <input type="password" value={data.upstashToken} onChange={e => set('upstashToken', e.target.value)} placeholder="Secret token" />
             </FormGroup>
         </div>
     );
@@ -566,6 +575,7 @@ function Step7({ data, goTo }) {
             <div className="review-section">
                 <h4>Database <button className="btn btn-sm btn-outline" onClick={() => goTo(1)}>Edit</button></h4>
                 <div className="review-kv"><span>URI: </span>{'****' + data.mongoUri.slice(-20)}</div>
+                {data.upstashUrl && <div className="review-kv"><span>Upstash: </span>{data.upstashUrl}</div>}
             </div>
             <div className="review-section">
                 <h4>Auth <button className="btn btn-sm btn-outline" onClick={() => goTo(2)}>Edit</button></h4>

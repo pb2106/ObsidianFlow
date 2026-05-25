@@ -10,13 +10,6 @@ import { projectConfig } from '@/config/project.config';
 import { basePlugin } from '@/lib/db/plugins/basePlugin';
 import { encrypt, decrypt, isEncrypted } from '@/lib/db/encryption';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-export interface ILoginHistory {
-    ip: string;
-    timestamp: Date;
-    userAgent: string;
-}
-
 export interface IUserBase extends Document {
     email: string;
     passwordHash: string;
@@ -110,7 +103,7 @@ function buildUserSchema(): Schema {
         coreFields[field.name] = fieldDef;
     }
 
-    const schema = new Schema(coreFields as Parameters<typeof Schema>[0], {
+    const schema = new Schema(coreFields as Record<string, unknown>, {
         collection: 'users',
         strict: true,
     });
@@ -154,6 +147,16 @@ function buildUserSchema(): Schema {
         if (doc) decryptDoc(doc);
     });
 
+    // ── Query-critical indexes ─────────────────────────────────────────────────
+    // Sparse: only indexes documents that have these fields set, keeping the index small
+    schema.index({ passwordResetTokenHash: 1 }, { sparse: true });
+    schema.index({ emailVerificationToken: 1 }, { sparse: true });
+    // Fast lockout check on every login
+    schema.index({ lockoutUntil: 1 }, { sparse: true });
+    // Admin dashboard: count users by date range & active status
+    schema.index({ isActive: 1, createdAt: -1 });
+    // Role-based listing used by admin user list
+    schema.index({ role: 1, isActive: 1 });
 
     return schema;
 }

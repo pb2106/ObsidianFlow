@@ -44,7 +44,7 @@ async function handler(req: NextRequest) {
     const user = await UserModel.findOne({
         passwordResetTokenHash: tokenHash,
         passwordResetExpiry: { $gt: new Date() },
-        isDeleted: false,
+        isActive: true,
     });
 
     if (!user) {

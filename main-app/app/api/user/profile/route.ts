@@ -63,7 +63,7 @@ async function handler(req: AuthedRequest) {
         req.user.sub,
         { $set: parsed.data },
         { new: true }
-    ).select('-passwordHash -passwordResetTokenHash -totpSecret -backupCodes -loginHistory -sessions -emailVerificationToken');
+    ).select('-passwordHash -passwordResetTokenHash -totpSecret -backupCodes -sessions -emailVerificationToken');
 
     if (!user) return fail('User not found', 'NOT_FOUND', 404);
 

@@ -21,8 +21,8 @@ export interface IAuditLog extends Document {
 
 const AuditLogSchema = new Schema<IAuditLog>(
     {
-        timestamp: { type: Date, default: Date.now, index: true },
-        actor: { type: String, required: true },
+        timestamp: { type: Date, default: Date.now },
+        actor: { type: String, required: true, index: true },
         actorId: { type: String, default: null },
         actionType: { type: String, required: true, index: true },
         target: { type: String, required: true },
@@ -36,6 +36,17 @@ const AuditLogSchema = new Schema<IAuditLog>(
         // No timestamps plugin — we manage timestamp ourselves to keep it immutable
     }
 );
+
+/*
+ * Note on retention: 
+ * Do not add a TTL to audit logs. They are intentionally kept forever. 
+ * If storage becomes a concern, the recommended approach is moving records 
+ * older than 90 days to an `audit_log_archive` collection via a scheduled job, 
+ * not deleting them.
+ */
+
+// Basic indexes
+AuditLogSchema.index({ timestamp: -1 });
 
 // Compound indexes for common filter patterns
 AuditLogSchema.index({ actor: 1, timestamp: -1 });
