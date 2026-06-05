@@ -131,7 +131,7 @@ ${standardFields}
 
 export type ProjectConfig = typeof projectConfig;
 `;
-
+        fs.mkdirSync(path.dirname(configPath), { recursive: true });
         fs.writeFileSync(configPath, configContent, 'utf8');
         step('project.config.ts written ✓');
 
