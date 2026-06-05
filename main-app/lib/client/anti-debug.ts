@@ -60,19 +60,44 @@ export function initAntiDebug(): void {
     setInterval(checkDevTools, 1000);
 
     // ── 4. React DevTools poisoning ─────────────────────────────────────────
-    // If someone installs the React DevTools extension the hook is registered
-    // before React loads. We overwrite it with a non-functional proxy.
-    Object.defineProperty(window, '__REACT_DEVTOOLS_GLOBAL_HOOK__', {
-        get: () => ({
-            inject: noop,
-            onCommitFiberRoot: noop,
-            onCommitFiberUnmount: noop,
-            isDisabled: true,
-            supportsFiber: true,
-        }),
-        set: noop,
-        configurable: false,
-    });
+    const existingDescriptor = Object.getOwnPropertyDescriptor(window, '__REACT_DEVTOOLS_GLOBAL_HOOK__');
+
+    if (!existingDescriptor) {
+        // Not yet defined — define it as non-configurable
+        Object.defineProperty(window, '__REACT_DEVTOOLS_GLOBAL_HOOK__', {
+            get: () => ({
+                inject: noop,
+                onCommitFiberRoot: noop,
+                onCommitFiberUnmount: noop,
+                isDisabled: true,
+                supportsFiber: true,
+            }),
+            set: noop,
+            configurable: false,
+        });
+    } else if (existingDescriptor.configurable) {
+        // Already defined but still configurable — we can overwrite it
+        Object.defineProperty(window, '__REACT_DEVTOOLS_GLOBAL_HOOK__', {
+            get: () => ({
+                inject: noop,
+                onCommitFiberRoot: noop,
+                onCommitFiberUnmount: noop,
+                isDisabled: true,
+                supportsFiber: true,
+            }),
+            set: noop,
+            configurable: false,
+        });
+    } else {
+        // Already locked by the extension — mutate properties in place instead
+        const hook = (window as unknown as Record<string, unknown>)['__REACT_DEVTOOLS_GLOBAL_HOOK__'] as Record<string, unknown>;
+        if (hook && typeof hook === 'object') {
+            try { hook['inject'] = noop; } catch { /* */ }
+            try { hook['onCommitFiberRoot'] = noop; } catch { /* */ }
+            try { hook['onCommitFiberUnmount'] = noop; } catch { /* */ }
+            try { hook['isDisabled'] = true; } catch { /* */ }
+        }
+    }
 
     // ── 5. Disable right-click context menu ─────────────────────────────────
     window.addEventListener('contextmenu', e => e.preventDefault());
